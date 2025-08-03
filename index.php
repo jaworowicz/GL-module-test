@@ -56,34 +56,34 @@ $cache_bust = time();
         
         <div class="section">
             <h2>📁 Pliki Modułu</h2>
-            <p>Kliknij aby otworzyć aktualną wersję pliku:</p>
+            <p>Kliknij aby skopiować nazwę pliku do schowka:</p>
             
             <div style="margin: 1rem 0;">
                 <strong>Główne pliki aplikacji:</strong><br>
-                <button onclick="openFile('attached_assets/index_1754263632477.php')" class="file-link">index.php (Main Interface)</button>
-                <button onclick="openFile('attached_assets/script_1754263632477.js')" class="file-link">script.js (JavaScript Logic)</button>
-                <button onclick="openFile('attached_assets/style_1754256276123.css')" class="file-link">style.css (Styles)</button>
-                <button onclick="openFile('attached_assets/ajax_handler_1754256276122.php')" class="file-link">ajax_handler.php (API)</button>
+                <button onclick="copyToClipboard('attached_assets/index_1754263632477.php')" class="file-link">📄 index.php (Main Interface)</button>
+                <button onclick="copyToClipboard('attached_assets/script_1754263632477.js')" class="file-link">📄 script.js (JavaScript Logic)</button>
+                <button onclick="copyToClipboard('attached_assets/style_1754256276123.css')" class="file-link">📄 style.css (Styles)</button>
+                <button onclick="copyToClipboard('attached_assets/ajax_handler_1754256276122.php')" class="file-link">📄 ajax_handler.php (API)</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Pliki konfiguracyjne:</strong><br>
-                <button onclick="openFile('attached_assets/auth_1754256310437.php')" class="file-link">auth.php (Authentication)</button>
-                <button onclick="openFile('attached_assets/db_1754256310439.php')" class="file-link">db.php (Database)</button>
-                <button onclick="openFile('attached_assets/header-test_1754256310440.php')" class="file-link">header-test.php (Header)</button>
-                <button onclick="openFile('attached_assets/footer-new_1754256310439.php')" class="file-link">footer-new.php (Footer)</button>
+                <button onclick="copyToClipboard('attached_assets/auth_1754256310437.php')" class="file-link">🔐 auth.php (Authentication)</button>
+                <button onclick="copyToClipboard('attached_assets/db_1754256310439.php')" class="file-link">🗄️ db.php (Database)</button>
+                <button onclick="copyToClipboard('attached_assets/header-test_1754256310440.php')" class="file-link">📋 header-test.php (Header)</button>
+                <button onclick="copyToClipboard('attached_assets/footer-new_1754256310439.php')" class="file-link">📋 footer-new.php (Footer)</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Baza danych:</strong><br>
-                <button onclick="openFile('database/horusjcz_liberty.sql')" class="file-link">horusjcz_liberty.sql (Database Schema)</button>
-                <button onclick="openFile('database/README.md')" class="file-link">Database README</button>
+                <button onclick="copyToClipboard('database/horusjcz_liberty.sql')" class="file-link">🗃️ horusjcz_liberty.sql (Database Schema)</button>
+                <button onclick="copyToClipboard('database/README.md')" class="file-link">📖 Database README</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Moduł publiczny:</strong><br>
-                <button onclick="openFile('modules/licznik2/public.php')" class="file-link">public.php (Public View)</button>
-                <button onclick="openFile('attached_assets/public_1754262607965.php')" class="file-link">public.php (Updated Version)</button>
+                <button onclick="copyToClipboard('modules/licznik2/public.php')" class="file-link">🌐 public.php (Public View)</button>
+                <button onclick="copyToClipboard('attached_assets/public_1754262607965.php')" class="file-link">🌐 public.php (Updated Version)</button>
             </div>
             
             <div style="margin: 1rem 0;">
@@ -120,34 +120,63 @@ $cache_bust = time();
     </div>
 
     <script>
-        function openFile(filePath) {
-            // Try multiple methods to open files in Replit editor
-            console.log('Attempting to open file:', filePath);
+        function copyToClipboard(filePath) {
+            // Skopiuj nazwę pliku do schowka
+            navigator.clipboard.writeText(filePath).then(function() {
+                console.log('Skopiowano do schowka:', filePath);
+                showNotification('Skopiowano: ' + filePath, 'success');
+            }).catch(function(err) {
+                console.error('Błąd kopiowania:', err);
+                // Fallback dla starszych przeglądarek
+                const textArea = document.createElement('textarea');
+                textArea.value = filePath;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showNotification('Skopiowano: ' + filePath, 'success');
+                } catch (fallbackErr) {
+                    showNotification('Błąd kopiowania do schowka', 'error');
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg border max-w-md transition-all duration-300 transform translate-x-0 ${
+                type === 'success' ? 'bg-green-600/90 border-green-500 text-white' : 
+                type === 'error' ? 'bg-red-600/90 border-red-500 text-white' : 
+                'bg-blue-600/90 border-blue-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
             
-            // Method 1: Try postMessage to parent
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'openFile', 
-                    path: filePath
-                }, '*');
-                console.log('Sent postMessage to parent');
-            }
+            // Animacja wejścia
+            setTimeout(() => {
+                notification.style.transform = 'translateX(-10px)';
+            }, 10);
             
-            // Method 2: Try Replit API if available
-            if (window.replit && window.replit.openFile) {
-                window.replit.openFile(filePath);
-                console.log('Used Replit API');
-            }
-            
-            // Method 3: Log information for debugging
-            console.log('File path requested:', filePath);
-            alert('Próba otwarcia pliku: ' + filePath + '\nSprawdź konsolę deweloperską (F12)');
+            // Usunięcie po 3 sekundach
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
         }
         
         // Debug information
-        console.log('Preview page loaded');
+        console.log('Preview page loaded - copy to clipboard mode');
         console.log('Window location:', window.location);
-        console.log('Parent window:', window.parent !== window);
     </script>
 </body>
 </html>
