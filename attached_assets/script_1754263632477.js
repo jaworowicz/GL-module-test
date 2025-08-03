@@ -416,23 +416,376 @@ function setupKeyboardNavigation() {
     });
 }
 
+// ============= FUNKCJE MODALI I ZARZĄDZANIA =============
+
+// Nowy licznik
+function showNewCounterModal() {
+    document.getElementById('new-counter-modal').classList.remove('hidden');
+    document.getElementById('new-counter-title').value = '';
+    document.getElementById('new-counter-category').value = '';
+    document.getElementById('new-counter-increment').value = '1';
+    document.getElementById('new-counter-personal').checked = true;
+}
+
+function saveNewCounter() {
+    const title = document.getElementById('new-counter-title').value.trim();
+    const categoryId = document.getElementById('new-counter-category').value;
+    const increment = parseInt(document.getElementById('new-counter-increment').value) || 1;
+    const isPersonal = document.getElementById('new-counter-personal').checked;
+    
+    if (!title) {
+        alert('Wprowadź nazwę licznika');
+        return;
+    }
+    
+    if (!categoryId) {
+        alert('Wybierz kategorię');
+        return;
+    }
+
+    fetch('ajax_handler.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `action=create_counter&title=${encodeURIComponent(title)}&category_id=${categoryId}&increment=${increment}&is_personal=${isPersonal ? 1 : 0}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAllModals();
+            loadCounterData();
+        } else {
+            alert('Błąd tworzenia licznika: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Błąd:', error);
+        alert('Błąd sieciowy');
+    });
+}
+
+// Edycja licznika
+function editCounter(counterId) {
+    const counter = currentCounters.find(c => c.id == counterId);
+    if (!counter) return;
+
+    selectedCounterId = counterId;
+    
+    document.getElementById('edit-counter-title').value = counter.title;
+    document.getElementById('edit-counter-category').value = counter.category_id;
+    document.getElementById('edit-counter-increment').value = counter.increment || 1;
+    document.getElementById('edit-counter-personal').checked = counter.is_personal == 1;
+    
+    document.getElementById('edit-counter-modal').classList.remove('hidden');
+}
+
+function saveEditCounter() {
+    if (!selectedCounterId) return;
+
+    const title = document.getElementById('edit-counter-title').value.trim();
+    const categoryId = document.getElementById('edit-counter-category').value;
+    const increment = parseInt(document.getElementById('edit-counter-increment').value) || 1;
+    const isPersonal = document.getElementById('edit-counter-personal').checked;
+    
+    if (!title) {
+        alert('Wprowadź nazwę licznika');
+        return;
+    }
+    
+    if (!categoryId) {
+        alert('Wybierz kategorię');
+        return;
+    }
+
+    fetch('ajax_handler.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `action=update_counter&counter_id=${selectedCounterId}&title=${encodeURIComponent(title)}&category_id=${categoryId}&increment=${increment}&is_personal=${isPersonal ? 1 : 0}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAllModals();
+            loadCounterData();
+            selectedCounterId = null;
+        } else {
+            alert('Błąd aktualizacji licznika: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Błąd:', error);
+        alert('Błąd sieciowy');
+    });
+}
+
+// Usuwanie licznika
+function deleteCounter(counterId) {
+    deleteCounterId = counterId;
+    const counter = currentCounters.find(c => c.id == counterId);
+    document.getElementById('delete-counter-name').textContent = counter ? counter.title : 'licznik';
+    document.getElementById('delete-counter-modal').classList.remove('hidden');
+}
+
+function confirmDeleteCounter() {
+    if (!deleteCounterId) return;
+
+    fetch('ajax_handler.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `action=delete_counter&counter_id=${deleteCounterId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAllModals();
+            loadCounterData();
+            deleteCounterId = null;
+        } else {
+            alert('Błąd usuwania licznika: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Błąd:', error);
+        alert('Błąd sieciowy');
+    });
+}
+
+// ============= FUNKCJE KPI =============
+
+// Nowy cel KPI
+function showNewKpiModal() {
+    document.getElementById('new-kpi-modal').classList.remove('hidden');
+    document.getElementById('new-kpi-name').value = '';
+    document.getElementById('new-kpi-total-goal').value = '';
+    document.getElementById('new-kpi-daily-goal').value = '';
+    populateKpiCountersList('new-kpi-counters');
+}
+
+function populateKpiCountersList(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let html = '';
+    currentCounters.forEach(counter => {
+        const categoryName = window.appData.categories.find(cat => cat.id == counter.category_id)?.name || 'Bez kategorii';
+        html += `
+            <label class="flex items-center p-2 hover:bg-slate-700 rounded">
+                <input type="checkbox" value="${counter.id}" class="mr-2">
+                <span>${counter.title} (${categoryName})</span>
+            </label>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function saveNewKpi() {
+    const name = document.getElementById('new-kpi-name').value.trim();
+    const totalGoal = parseInt(document.getElementById('new-kpi-total-goal').value) || 0;
+    const dailyGoal = parseInt(document.getElementById('new-kpi-daily-goal').value) || 0;
+    
+    const selectedCounters = [];
+    document.querySelectorAll('#new-kpi-counters input:checked').forEach(checkbox => {
+        selectedCounters.push(checkbox.value);
+    });
+    
+    if (!name) {
+        alert('Wprowadź nazwę celu KPI');
+        return;
+    }
+    
+    if (totalGoal <= 0) {
+        alert('Wprowadź cel miesięczny większy od 0');
+        return;
+    }
+
+    fetch('ajax_handler.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `action=create_kpi_goal&name=${encodeURIComponent(name)}&total_goal=${totalGoal}&daily_goal=${dailyGoal}&linked_counters=${JSON.stringify(selectedCounters)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAllModals();
+            loadKpiData();
+        } else {
+            alert('Błąd tworzenia celu KPI: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Błąd:', error);
+        alert('Błąd sieciowy');
+    });
+}
+
+// Edycja celu KPI
+function editKpiGoal(goalId) {
+    const goal = currentKpiGoals.find(g => g.id == goalId);
+    if (!goal) return;
+
+    document.getElementById('edit-kpi-name').value = goal.name;
+    document.getElementById('edit-kpi-total-goal').value = goal.total_goal;
+    document.getElementById('edit-kpi-daily-goal').value = goal.daily_goal || '';
+    
+    populateKpiCountersList('edit-kpi-counters');
+    
+    // Zaznacz powiązane liczniki
+    setTimeout(() => {
+        const linkedIds = goal.linked_counter_ids || [];
+        document.querySelectorAll('#edit-kpi-counters input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = linkedIds.includes(checkbox.value);
+        });
+    }, 100);
+    
+    selectedKpiGoalId = goalId;
+    document.getElementById('edit-kpi-modal').classList.remove('hidden');
+}
+
+function saveEditKpi() {
+    if (!selectedKpiGoalId) return;
+
+    const name = document.getElementById('edit-kpi-name').value.trim();
+    const totalGoal = parseInt(document.getElementById('edit-kpi-total-goal').value) || 0;
+    const dailyGoal = parseInt(document.getElementById('edit-kpi-daily-goal').value) || 0;
+    
+    const selectedCounters = [];
+    document.querySelectorAll('#edit-kpi-counters input:checked').forEach(checkbox => {
+        selectedCounters.push(checkbox.value);
+    });
+    
+    if (!name) {
+        alert('Wprowadź nazwę celu KPI');
+        return;
+    }
+    
+    if (totalGoal <= 0) {
+        alert('Wprowadź cel miesięczny większy od 0');
+        return;
+    }
+
+    fetch('ajax_handler.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: `action=update_kpi_goal&goal_id=${selectedKpiGoalId}&name=${encodeURIComponent(name)}&total_goal=${totalGoal}&daily_goal=${dailyGoal}&linked_counters=${JSON.stringify(selectedCounters)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAllModals();
+            loadKpiData();
+            selectedKpiGoalId = null;
+        } else {
+            alert('Błąd aktualizacji celu KPI: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Błąd:', error);
+        alert('Błąd sieciowy');
+    });
+}
+
+// Usuwanie celu KPI
+function deleteKpiGoal(goalId) {
+    const goal = currentKpiGoals.find(g => g.id == goalId);
+    if (!goal) return;
+
+    if (confirm(`Czy na pewno chcesz usunąć cel KPI "${goal.name}"?`)) {
+        fetch('ajax_handler.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `action=delete_kpi_goal&goal_id=${goalId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadKpiData();
+            } else {
+                alert('Błąd usuwania celu KPI: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Błąd:', error);
+            alert('Błąd sieciowy');
+        });
+    }
+}
+
 // Zamknij wszystkie modale
 function closeAllModals() {
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.classList.add('hidden');
     });
+    selectedCounterId = null;
+    deleteCounterId = null;
 }
 
 // Otwórz ustawienia licznika
 function openCounterSettings(counterId) {
-    // Implementacja ustawień licznika
-    console.log('Otwórz ustawienia dla licznika:', counterId);
+    const settingsMenu = document.getElementById('counter-settings-menu');
+    const button = event.target.closest('button');
+    
+    // Ustaw pozycję menu
+    const rect = button.getBoundingClientRect();
+    settingsMenu.style.top = rect.bottom + 'px';
+    settingsMenu.style.left = rect.left + 'px';
+    
+    // Zapisz ID licznika
+    settingsMenu.dataset.counterId = counterId;
+    
+    // Pokaż menu
+    settingsMenu.classList.remove('hidden');
+    
+    // Zamknij menu po kliknięciu poza nim
+    setTimeout(() => {
+        document.addEventListener('click', closeSettingsMenu);
+    }, 10);
+}
+
+function closeSettingsMenu() {
+    document.getElementById('counter-settings-menu').classList.add('hidden');
+    document.removeEventListener('click', closeSettingsMenu);
+}
+
+function settingsEditCounter() {
+    const counterId = document.getElementById('counter-settings-menu').dataset.counterId;
+    closeSettingsMenu();
+    editCounter(parseInt(counterId));
+}
+
+function settingsDeleteCounter() {
+    const counterId = document.getElementById('counter-settings-menu').dataset.counterId;
+    closeSettingsMenu();
+    deleteCounter(parseInt(counterId));
 }
 
 // Otwórz widok publiczny
 function openPublicView() {
     const sfid = window.appData.currentSfid;
     window.open(`/modules/licznik2/public.php?sfid=${sfid}`, '_blank');
+}
+
+// Eksport danych
+function exportData() {
+    const month = document.getElementById('kpi-month-selector').value;
+    window.open(`ajax_handler.php?action=export_data&month=${month}`, '_blank');
 }
 
 // Zamknij menu kategorii przy kliknięciu poza nim
@@ -444,3 +797,6 @@ document.addEventListener('click', function(e) {
         menu.classList.remove('show');
     }
 });
+
+// Dodaj zmienne globalne dla ID
+let selectedKpiGoalId = null;
