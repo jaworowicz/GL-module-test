@@ -96,16 +96,17 @@ foreach ($kpi_goals as &$goal) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lokalizacja <?= htmlspecialchars($sfid) ?> - <?= date('d.m.Y', strtotime($selected_date)) ?></title>
+    <title><?= htmlspecialchars($location['name']) ?> - <?= date('d.m.Y', strtotime($selected_date)) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fontawesome.com/releases/v6/css/all.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
             background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1c3d52); 
             background-size: 400% 400%; 
-            animation: gradientBG 15s ease infinite; 
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh;
         }
         @keyframes gradientBG { 
             0% { background-position: 0% 50%; } 
@@ -140,8 +141,8 @@ foreach ($kpi_goals as &$goal) {
 <body class="bg-slate-900 text-white antialiased">
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">Lokalizacja <?= htmlspecialchars($sfid) ?></h1>
-            <h2 class="text-2xl text-slate-300 mb-4"><?= htmlspecialchars($location['name']) ?></h2>
+            <h1 class="text-4xl font-bold text-white mb-2"><?= htmlspecialchars($location['name']) ?></h1>
+            <h2 class="text-2xl text-slate-300 mb-4"><?= htmlspecialchars($location['address']) ?></h2>
             
             <!-- Przyciski zmiany daty -->
             <div class="flex justify-center items-center gap-2 mb-4 flex-wrap">
@@ -226,10 +227,25 @@ foreach ($kpi_goals as &$goal) {
 
     <script>
         function changeDate(period) {
+            // Pobierz SFID z URL - obsługa różnych formatów URL
+            let sfid;
             const urlParams = new URLSearchParams(window.location.search);
-            const sfid = urlParams.get('sfid');
-            let newDate;
             
+            // Jeśli jest w parametrach URL
+            if (urlParams.get('sfid')) {
+                sfid = urlParams.get('sfid');
+            } else {
+                // Jeśli URL jest w formacie /wyniki/<SFID>
+                const pathParts = window.location.pathname.split('/');
+                const wynikiIndex = pathParts.indexOf('wyniki');
+                if (wynikiIndex !== -1 && pathParts[wynikiIndex + 1]) {
+                    sfid = pathParts[wynikiIndex + 1];
+                } else {
+                    sfid = '<?= htmlspecialchars($sfid) ?>';
+                }
+            }
+            
+            let newDate;
             const today = new Date();
             
             switch(period) {
@@ -255,7 +271,15 @@ foreach ($kpi_goals as &$goal) {
                     break;
             }
             
-            window.location.href = `?sfid=${sfid}&date=${newDate}`;
+            // Konstruuj URL w zależności od aktualnego formatu
+            if (window.location.pathname.includes('/wyniki/')) {
+                // Format htaccess
+                const baseUrl = window.location.pathname.split('?')[0];
+                window.location.href = `${baseUrl}?date=${newDate}`;
+            } else {
+                // Standardowy format
+                window.location.href = `?sfid=${sfid}&date=${newDate}`;
+            }
         }
     </script>
 </body>
