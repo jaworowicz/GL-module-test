@@ -57,30 +57,30 @@ $cache_bust = time();
             
             <div style="margin: 1rem 0;">
                 <strong>Główne pliki aplikacji:</strong><br>
-                <a href="attached_assets/index_1754263632477.php" class="file-link" target="_blank">index.php (Main Interface)</a>
-                <a href="attached_assets/script_1754263632477.js" class="file-link" target="_blank">script.js (JavaScript Logic)</a>
-                <a href="attached_assets/style_1754256276123.css" class="file-link" target="_blank">style.css (Styles)</a>
-                <a href="attached_assets/ajax_handler_1754256276122.php" class="file-link" target="_blank">ajax_handler.php (API)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/index_1754263632477.php'}, '*')" class="file-link">index.php (Main Interface)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/script_1754263632477.js'}, '*')" class="file-link">script.js (JavaScript Logic)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/style_1754256276123.css'}, '*')" class="file-link">style.css (Styles)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/ajax_handler_1754256276122.php'}, '*')" class="file-link">ajax_handler.php (API)</a>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Pliki konfiguracyjne:</strong><br>
-                <a href="attached_assets/auth_1754256310437.php" class="file-link" target="_blank">auth.php (Authentication)</a>
-                <a href="attached_assets/db_1754256310439.php" class="file-link" target="_blank">db.php (Database)</a>
-                <a href="attached_assets/header-test_1754256310440.php" class="file-link" target="_blank">header-test.php (Header)</a>
-                <a href="attached_assets/footer-new_1754256310439.php" class="file-link" target="_blank">footer-new.php (Footer)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/auth_1754256310437.php'}, '*')" class="file-link">auth.php (Authentication)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/db_1754256310439.php'}, '*')" class="file-link">db.php (Database)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/header-test_1754256310440.php'}, '*')" class="file-link">header-test.php (Header)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/footer-new_1754256310439.php'}, '*')" class="file-link">footer-new.php (Footer)</a>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Baza danych:</strong><br>
-                <a href="database/horusjcz_liberty.sql" class="file-link" target="_blank">horusjcz_liberty.sql (Database Schema)</a>
-                <a href="database/README.md" class="file-link" target="_blank">Database README</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'database/horusjcz_liberty.sql'}, '*')" class="file-link">horusjcz_liberty.sql (Database Schema)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'database/README.md'}, '*')" class="file-link">Database README</a>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Moduł publiczny:</strong><br>
-                <a href="modules/licznik2/public.php" class="file-link" target="_blank">public.php (Public View)</a>
-                <a href="attached_assets/public_1754262607965.php" class="file-link" target="_blank">public.php (Updated Version)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'modules/licznik2/public.php'}, '*')" class="file-link">public.php (Public View)</a>
+                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/public_1754262607965.php'}, '*')" class="file-link">public.php (Updated Version)</a>
             </div>
             
             <div style="margin: 1rem 0;">
