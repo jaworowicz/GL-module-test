@@ -34,6 +34,9 @@ $cache_bust = time();
             border-radius: 6px;
             text-decoration: none;
             font-size: 14px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
         }
         .file-link:hover {
             background: #1d4ed8;
@@ -57,30 +60,30 @@ $cache_bust = time();
             
             <div style="margin: 1rem 0;">
                 <strong>Główne pliki aplikacji:</strong><br>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/index_1754263632477.php'}, '*')" class="file-link">index.php (Main Interface)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/script_1754263632477.js'}, '*')" class="file-link">script.js (JavaScript Logic)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/style_1754256276123.css'}, '*')" class="file-link">style.css (Styles)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/ajax_handler_1754256276122.php'}, '*')" class="file-link">ajax_handler.php (API)</a>
+                <button onclick="openFile('attached_assets/index_1754263632477.php')" class="file-link">index.php (Main Interface)</button>
+                <button onclick="openFile('attached_assets/script_1754263632477.js')" class="file-link">script.js (JavaScript Logic)</button>
+                <button onclick="openFile('attached_assets/style_1754256276123.css')" class="file-link">style.css (Styles)</button>
+                <button onclick="openFile('attached_assets/ajax_handler_1754256276122.php')" class="file-link">ajax_handler.php (API)</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Pliki konfiguracyjne:</strong><br>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/auth_1754256310437.php'}, '*')" class="file-link">auth.php (Authentication)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/db_1754256310439.php'}, '*')" class="file-link">db.php (Database)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/header-test_1754256310440.php'}, '*')" class="file-link">header-test.php (Header)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/footer-new_1754256310439.php'}, '*')" class="file-link">footer-new.php (Footer)</a>
+                <button onclick="openFile('attached_assets/auth_1754256310437.php')" class="file-link">auth.php (Authentication)</button>
+                <button onclick="openFile('attached_assets/db_1754256310439.php')" class="file-link">db.php (Database)</button>
+                <button onclick="openFile('attached_assets/header-test_1754256310440.php')" class="file-link">header-test.php (Header)</button>
+                <button onclick="openFile('attached_assets/footer-new_1754256310439.php')" class="file-link">footer-new.php (Footer)</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Baza danych:</strong><br>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'database/horusjcz_liberty.sql'}, '*')" class="file-link">horusjcz_liberty.sql (Database Schema)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'database/README.md'}, '*')" class="file-link">Database README</a>
+                <button onclick="openFile('database/horusjcz_liberty.sql')" class="file-link">horusjcz_liberty.sql (Database Schema)</button>
+                <button onclick="openFile('database/README.md')" class="file-link">Database README</button>
             </div>
             
             <div style="margin: 1rem 0;">
                 <strong>Moduł publiczny:</strong><br>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'modules/licznik2/public.php'}, '*')" class="file-link">public.php (Public View)</a>
-                <a href="javascript:void(0)" onclick="window.parent.postMessage({type: 'openFile', path: 'attached_assets/public_1754262607965.php'}, '*')" class="file-link">public.php (Updated Version)</a>
+                <button onclick="openFile('modules/licznik2/public.php')" class="file-link">public.php (Public View)</button>
+                <button onclick="openFile('attached_assets/public_1754262607965.php')" class="file-link">public.php (Updated Version)</button>
             </div>
             
             <div style="margin: 1rem 0;">
@@ -115,5 +118,36 @@ $cache_bust = time();
             </ul>
         </div>
     </div>
+
+    <script>
+        function openFile(filePath) {
+            // Try multiple methods to open files in Replit editor
+            console.log('Attempting to open file:', filePath);
+            
+            // Method 1: Try postMessage to parent
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'openFile', 
+                    path: filePath
+                }, '*');
+                console.log('Sent postMessage to parent');
+            }
+            
+            // Method 2: Try Replit API if available
+            if (window.replit && window.replit.openFile) {
+                window.replit.openFile(filePath);
+                console.log('Used Replit API');
+            }
+            
+            // Method 3: Log information for debugging
+            console.log('File path requested:', filePath);
+            alert('Próba otwarcia pliku: ' + filePath + '\nSprawdź konsolę deweloperską (F12)');
+        }
+        
+        // Debug information
+        console.log('Preview page loaded');
+        console.log('Window location:', window.location);
+        console.log('Parent window:', window.parent !== window);
+    </script>
 </body>
 </html>
