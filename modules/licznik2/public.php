@@ -1,4 +1,4 @@
-
+php
 <?php
 define('IS_PUBLIC_PAGE', true);
 require_once '../../includes/db.php';
@@ -54,6 +54,13 @@ $counters_stmt = $pdo->prepare($counters_query);
 $counters_stmt->execute([$selected_date, $sfid]);
 $counters = $counters_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Sprawdź czy istnieją jakiekolwiek cele KPI dla danej lokalizacji (ogólnie)
+$has_kpi_query = "SELECT COUNT(*) FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1";
+$has_kpi_stmt = $pdo->prepare($has_kpi_query);
+$has_kpi_stmt->execute([$sfid]);
+$has_kpi_goals = $has_kpi_stmt->fetchColumn() > 0;
+
+
 // Pobierz cele KPI tylko jeśli są liczniki
 $kpi_goals = [];
 if (!empty($counters)) {
@@ -78,7 +85,7 @@ if (!empty($counters)) {
     foreach ($kpi_goals as &$goal) {
         $linkedIds = $goal['linked_counter_ids'] ? explode(',', $goal['linked_counter_ids']) : [];
         $monthly_total = 0;
-        
+
         if (!empty($linkedIds)) {
             $placeholders = str_repeat('?,', count($linkedIds) - 1) . '?';
             $realization_query = "
@@ -87,20 +94,20 @@ if (!empty($counters)) {
                 WHERE dv.counter_id IN ($placeholders)
                 AND YEAR(dv.date) = ? AND MONTH(dv.date) = ?
             ";
-            
+
             $params = array_merge($linkedIds, [$kpi_year, $kpi_month]);
-            
+
             // Debug - sprawdź parametry zapytania
             error_log("KPI Query params: " . json_encode($params) . " for goal: " . $goal['name']);
-            
+
             $realization_stmt = $pdo->prepare($realization_query);
             $realization_stmt->execute($params);
             $monthly_total = $realization_stmt->fetchColumn();
-            
+
             // Debug - sprawdź wynik
             error_log("Monthly total for goal " . $goal['name'] . ": " . $monthly_total);
         }
-        
+
         $goal['monthly_total'] = $monthly_total;
         $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($monthly_total / $goal['total_goal']) * 100) : 0;
     }
@@ -180,26 +187,26 @@ if (!empty($counters)) {
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-white mb-2"><?= htmlspecialchars($location['name']) ?></h1>
             <h2 class="text-2xl text-slate-300 mb-4">Kod lokalizacji: <?= htmlspecialchars($sfid) ?></h2>
-            
+
             <!-- Przyciski zmiany daty -->
             <div class="flex justify-center items-center gap-2 mb-4 flex-wrap">
                 <button onclick="changeDate('yesterday')" class="date-button text-white px-4 py-2 rounded-lg" data-period="yesterday">
                     <i class="fas fa-chevron-left mr-1"></i> Wczoraj
                 </button>
-                
+
                 <button onclick="changeDate('current_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="current_month">
                     <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
                 </button>
-                
+
                 <button onclick="changeDate('previous_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="previous_month">
                     <i class="fas fa-calendar-alt mr-1"></i> Poprzedni miesiąc
                 </button>
-                
+
                 <button onclick="changeDate('today')" class="date-button today text-white px-4 py-2 rounded-lg" data-period="today">
                     <i class="fas fa-calendar-day mr-1"></i> Dziś
                 </button>
             </div>
-            
+
             <p class="text-slate-500 mt-2">Stan na dzień: <?= date('d.m.Y', strtotime($selected_date)) ?></p>
         </header>
 
@@ -229,45 +236,53 @@ if (!empty($counters)) {
         </section>
 
         <!-- KPI -->
-        <?php if (!empty($kpi_goals)): ?>
         <section>
             <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>)</h3>
-            <div class="overflow-x-auto bg-slate-800/70 border border-slate-700 rounded-lg">
-                <table class="min-w-full text-sm text-left text-gray-300">
-                    <thead class="text-xs text-gray-400 uppercase bg-gray-800">
-                        <tr>
-                            <th class="px-6 py-3">Cel</th>
-                            <th class="px-6 py-3">Realizacja</th>
-                            <th class="px-6 py-3">Cel miesięczny</th>
-                            <th class="px-6 py-3 w-1/3">Postęp</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($kpi_goals as $goal): ?>
-                        <tr class="border-b border-slate-700 hover:bg-slate-800">
-                            <td class="px-6 py-4 font-medium text-white"><?= htmlspecialchars($goal['name']) ?></td>
-                            <td class="px-6 py-4 text-right font-mono"><?= $goal['monthly_total'] ?></td>
-                            <td class="px-6 py-4 text-right font-mono"><?= $goal['total_goal'] ?></td>
-                            <td class="px-6 py-4">
-                                <div class="progress-bar h-4">
-                                    <div class="progress-fill" style="width: <?= $goal['progress_percent'] ?>%"></div>
-                                </div>
-                                <div class="text-xs text-gray-400 mt-1"><?= round($goal['progress_percent']) ?>%</div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+            <?php if (!$has_kpi_goals): ?>
+                <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-8 text-center">
+                    <i class="fas fa-info-circle text-blue-400 text-3xl mb-4"></i>
+                    <p class="text-slate-400 text-lg">Brak zdefiniowanych celów KPI dla tej lokalizacji.</p>
+                    <p class="text-slate-500 text-sm mt-2">Cele KPI nie zostały jeszcze skonfigurowane dla lokalizacji <?= htmlspecialchars($location['name']) ?>.</p>
+                </div>
+            <?php elseif (empty($kpi_goals)): ?>
+                <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-8 text-center">
+                    <i class="fas fa-calendar-times text-yellow-400 text-3xl mb-4"></i>
+                    <p class="text-slate-400 text-lg">Brak celów KPI do załadowania na ten okres.</p>
+                    <p class="text-slate-500 text-sm mt-2">
+                        Dla miesiąca <?= $selected_date_obj->format('m.Y') ?> nie ma dostępnych danych KPI. 
+                        Moduł celów KPI mógł nie być aktywny w tym okresie.
+                    </p>
+                </div>
+            <?php else: ?>
+                <div class="overflow-x-auto bg-slate-800/70 border border-slate-700 rounded-lg">
+                    <table class="min-w-full text-sm text-left text-gray-300">
+                        <thead class="text-xs text-gray-400 uppercase bg-gray-800">
+                            <tr>
+                                <th class="px-6 py-3">Cel</th>
+                                <th class="px-6 py-3">Realizacja</th>
+                                <th class="px-6 py-3">Cel miesięczny</th>
+                                <th class="px-6 py-3 w-1/3">Postęp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($kpi_goals as $goal): ?>
+                            <tr class="border-b border-slate-700 hover:bg-slate-800">
+                                <td class="px-6 py-4 font-medium text-white"><?= htmlspecialchars($goal['name']) ?></td>
+                                <td class="px-6 py-4 text-right font-mono"><?= $goal['monthly_total'] ?></td>
+                                <td class="px-6 py-4 text-right font-mono"><?= $goal['total_goal'] ?></td>
+                                <td class="px-6 py-4">
+                                    <div class="progress-bar h-4">
+                                        <div class="progress-fill" style="width: <?= $goal['progress_percent'] ?>%"></div>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-1"><?= round($goal['progress_percent']) ?>%</div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </section>
-        <?php else: ?>
-        <section>
-            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI</h3>
-            <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-8 text-center">
-                <p class="text-slate-400">Brak zdefiniowanych celów KPI dla tej lokalizacji.</p>
-            </div>
-        </section>
-        <?php endif; ?>
 
         <footer class="text-center text-slate-500 mt-12">
             <p>Dane odświeżane w czasie rzeczywistym</p>
@@ -290,7 +305,7 @@ if (!empty($counters)) {
                 </div>
             `;
             document.body.appendChild(notification);
-            
+
             setTimeout(() => {
                 notification.remove();
             }, 5000);
@@ -304,7 +319,7 @@ if (!empty($counters)) {
                     btn.classList.remove('today');
                 }
             });
-            
+
             // Dodaj aktywną klasę do wybranego przycisku
             const activeButton = document.querySelector(`[data-period="${period}"]`);
             if (activeButton) {
@@ -322,7 +337,7 @@ if (!empty($counters)) {
             // Pobierz SFID z URL
             let sfid;
             const urlParams = new URLSearchParams(window.location.search);
-            
+
             if (urlParams.get('sfid')) {
                 sfid = urlParams.get('sfid');
             } else {
@@ -334,7 +349,7 @@ if (!empty($counters)) {
                     sfid = '<?= htmlspecialchars($sfid) ?>';
                 }
             }
-            
+
             // Generuj URL w zależności od formatu
             if (window.location.pathname.includes('/wyniki/')) {
                 const baseUrl = window.location.pathname.split('?')[0];
@@ -348,21 +363,21 @@ if (!empty($counters)) {
             const today = new Date();
             const currentYear = today.getFullYear();
             const currentMonth = today.getMonth(); // 0-11
-            
+
             let dateParam, message = null;
-            
+
             switch(period) {
                 case 'yesterday':
                     const yesterday = new Date(today);
                     yesterday.setDate(yesterday.getDate() - 1);
                     dateParam = yesterday.toISOString().split('T')[0];
                     break;
-                    
+
                 case 'current_month':
                     dateParam = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
                     message = `Wyświetlam dane dla bieżącego miesiąca (${new Date(currentYear, currentMonth).toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`;
                     break;
-                    
+
                 case 'previous_month':
                     let prevMonth = currentMonth - 1;
                     let prevYear = currentYear;
@@ -373,20 +388,20 @@ if (!empty($counters)) {
                     dateParam = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
                     message = `Wyświetlam dane dla poprzedniego miesiąca (${new Date(prevYear, prevMonth).toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`;
                     break;
-                    
+
                 case 'today':
                 default:
                     dateParam = today.toISOString().split('T')[0];
                     break;
             }
-            
+
             if (message) {
                 showNotification(message, 'info');
             }
-            
+
             // Aktualizuj aktywny przycisk
             updateActiveButton(period);
-            
+
             // Generuj i przekieruj na nowy URL
             const newUrl = generateUrl(dateParam, period);
             window.location.href = newUrl;
@@ -398,9 +413,9 @@ if (!empty($counters)) {
             const periodParam = urlParams.get('period');
             const currentDate = '<?= $selected_date ?>';
             const today = new Date().toISOString().split('T')[0];
-            
+
             let activePeriod = null;
-            
+
             if (periodParam) {
                 activePeriod = periodParam;
             } else {
@@ -412,7 +427,7 @@ if (!empty($counters)) {
                     const currentYear = new Date().getFullYear();
                     const selectedMonth = parseInt(currentDate.split('-')[1]);
                     const selectedYear = parseInt(currentDate.split('-')[0]);
-                    
+
                     if (selectedYear === currentYear && selectedMonth === currentMonth) {
                         activePeriod = 'current_month';
                     } else {
@@ -426,7 +441,7 @@ if (!empty($counters)) {
                     }
                 }
             }
-            
+
             if (activePeriod) {
                 updateActiveButton(activePeriod);
             } else {
