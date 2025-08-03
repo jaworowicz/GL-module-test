@@ -148,16 +148,17 @@ foreach ($kpi_goals as &$goal) {
             transform: scale(1.05);
         }
         .date-button.active {
-            background: rgba(34, 197, 94, 0.7);
-            border-color: rgb(34, 197, 94);
+            background: rgba(34, 197, 94, 0.8) !important;
+            border-color: rgb(34, 197, 94) !important;
             transform: scale(1.05);
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
         }
         .date-button.today {
-            background: rgba(34, 197, 94, 0.6);
+            background: rgba(34, 197, 94, 0.5);
             border-color: rgb(22, 163, 74);
         }
         .date-button.today:hover {
-            background: rgba(34, 197, 94, 0.7);
+            background: rgba(34, 197, 94, 0.6);
         }
     </style>
 </head>
@@ -172,12 +173,34 @@ foreach ($kpi_goals as &$goal) {
                 <button onclick="changeDate('yesterday')" class="date-button text-white px-4 py-2 rounded-lg" data-period="yesterday">
                     <i class="fas fa-chevron-left mr-1"></i> Wczoraj
                 </button>
+                <?php
+                // Sprawdź czy minął już pełny tydzień (7 dni od początku miesiąca)
+                $today_day = date('j');
+                if ($today_day >= 8): ?>
                 <button onclick="changeDate('week')" class="date-button text-white px-4 py-2 rounded-lg" data-period="week">
                     <i class="fas fa-calendar-week mr-1"></i> Ten tydzień
                 </button>
+                <?php endif; ?>
+                
+                <?php
+                // Sprawdź czy minął już pełny miesiąc (jesteśmy przynajmniej w następnym miesiącu)
+                $current_month = date('n');
+                $current_year = date('Y');
+                $previous_month = $current_month - 1;
+                $previous_year = $current_year;
+                
+                if ($previous_month <= 0) {
+                    $previous_month = 12;
+                    $previous_year--;
+                }
+                
+                // Pokaż przycisk "Ten miesiąc" tylko jeśli jesteśmy przynajmniej w następnym miesiącu
+                if ($current_month > 1 || $current_year > date('Y', strtotime('2025-01-01'))): ?>
                 <button onclick="changeDate('month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="month">
-                    <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
+                    <i class="fas fa-calendar-alt mr-1"></i> Poprzedni miesiąc
                 </button>
+                <?php endif; ?>
+                
                 <button onclick="changeDate('today')" class="date-button today text-white px-4 py-2 rounded-lg" data-period="today">
                     <i class="fas fa-calendar-day mr-1"></i> Dziś
                 </button>
@@ -271,15 +294,26 @@ foreach ($kpi_goals as &$goal) {
         }
 
         function updateActiveButton(period) {
-            // Usuń aktywną klasę ze wszystkich przycisków
+            // Usuń aktywną klasę ze wszystkich przycisków (również klasę today)
             document.querySelectorAll('.date-button').forEach(btn => {
                 btn.classList.remove('active');
+                // Zachowaj klasę today tylko dla przycisku "Dziś" gdy nie jest aktywny
+                if (!btn.hasAttribute('data-period') || btn.getAttribute('data-period') !== 'today') {
+                    btn.classList.remove('today');
+                }
             });
             
             // Dodaj aktywną klasę do wybranego przycisku
             const activeButton = document.querySelector(`[data-period="${period}"]`);
             if (activeButton) {
                 activeButton.classList.add('active');
+                // Usuń klasę today z przycisku "Dziś" gdy jest aktywny inny przycisk
+                if (period !== 'today') {
+                    const todayButton = document.querySelector(`[data-period="today"]`);
+                    if (todayButton) {
+                        todayButton.classList.remove('today');
+                    }
+                }
             }
         }
 
@@ -320,9 +354,16 @@ foreach ($kpi_goals as &$goal) {
                     showNotification('Wyświetlam dane od 1. dnia bieżącego miesiąca dla spójności danych tygodniowych.', 'info');
                     break;
                 case 'month':
-                    // Od 1. dnia bieżącego miesiąca
-                    const startOfMonth = new Date(currentYear, currentMonth, 1);
-                    newDate = startOfMonth.toISOString().split('T')[0];
+                    // Od 1. dnia poprzedniego miesiąca
+                    let prevMonth = currentMonth - 1;
+                    let prevYear = currentYear;
+                    if (prevMonth < 0) {
+                        prevMonth = 11;
+                        prevYear--;
+                    }
+                    const startOfPrevMonth = new Date(prevYear, prevMonth, 1);
+                    newDate = startOfPrevMonth.toISOString().split('T')[0];
+                    showNotification(`Wyświetlam dane od 1. dnia poprzedniego miesiąca (${startOfPrevMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`, 'info');
                     break;
                 case 'today':
                 default:
@@ -354,6 +395,15 @@ foreach ($kpi_goals as &$goal) {
             const currentYear = new Date().getFullYear();
             const startOfMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
             
+            // Oblicz poprzedni miesiąc
+            let prevMonth = currentMonth - 1;
+            let prevYear = currentYear;
+            if (prevMonth < 0) {
+                prevMonth = 11;
+                prevYear--;
+            }
+            const startOfPrevMonth = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
+            
             let activePeriod = null;
             
             // Najpierw sprawdź parametr period z URL
@@ -364,6 +414,8 @@ foreach ($kpi_goals as &$goal) {
                 if (currentDate === today) {
                     activePeriod = 'today';
                 } else if (currentDate === startOfMonth) {
+                    activePeriod = 'week';
+                } else if (currentDate === startOfPrevMonth) {
                     activePeriod = 'month';
                 } else {
                     const yesterday = new Date();
@@ -376,6 +428,12 @@ foreach ($kpi_goals as &$goal) {
             
             if (activePeriod) {
                 updateActiveButton(activePeriod);
+            } else {
+                // Jeśli nie ma aktywnego, przywróć klasę today dla przycisku "Dziś"
+                const todayButton = document.querySelector(`[data-period="today"]`);
+                if (todayButton) {
+                    todayButton.classList.add('today');
+                }
             }
         });
     </script>
