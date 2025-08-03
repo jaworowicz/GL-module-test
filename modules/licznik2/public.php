@@ -19,6 +19,8 @@ if (!$location) {
     die('Lokalizacja nie istnieje lub została dezaktywowana');
 }
 
+// Obsługa parametru date z URL lub domyślnie dzisiaj
+$selected_date = $_GET['date'] ?? date('Y-m-d');
 $today = date('Y-m-d');
 $current_month = date('Y-m');
 
@@ -41,7 +43,7 @@ $counters_query = "
 ";
 
 $counters_stmt = $pdo->prepare($counters_query);
-$counters_stmt->execute([$today, $sfid]);
+$counters_stmt->execute([$selected_date, $sfid]);
 $counters = $counters_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Pobierz cele KPI
@@ -94,9 +96,10 @@ foreach ($kpi_goals as &$goal) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wyniki <?= htmlspecialchars($location['name']) ?> - <?= date('d.m.Y') ?></title>
+    <title>Lokalizacja <?= htmlspecialchars($sfid) ?> - <?= date('d.m.Y', strtotime($selected_date)) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fontawesome.com/releases/v6/css/all.css" rel="stylesheet">
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
@@ -137,10 +140,26 @@ foreach ($kpi_goals as &$goal) {
 <body class="bg-slate-900 text-white antialiased">
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">Wyniki</h1>
-            <h2 class="text-2xl text-slate-300 mb-1"><?= htmlspecialchars($location['name']) ?></h2>
-            <p class="text-slate-400"><?= htmlspecialchars($location['address']) ?></p>
-            <p class="text-slate-500 mt-2">Stan na dzień: <?= date('d.m.Y') ?></p>
+            <h1 class="text-4xl font-bold text-white mb-2">Lokalizacja <?= htmlspecialchars($sfid) ?></h1>
+            <h2 class="text-2xl text-slate-300 mb-4"><?= htmlspecialchars($location['name']) ?></h2>
+            
+            <!-- Przyciski zmiany daty -->
+            <div class="flex justify-center items-center gap-2 mb-4 flex-wrap">
+                <button onclick="changeDate('yesterday')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                    <i class="fas fa-chevron-left mr-1"></i> Wczoraj
+                </button>
+                <button onclick="changeDate('week')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                    <i class="fas fa-calendar-week mr-1"></i> Ten tydzień
+                </button>
+                <button onclick="changeDate('month')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                    <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
+                </button>
+                <button onclick="changeDate('today')" class="bg-green-600/60 hover:bg-green-500/60 text-white px-4 py-2 rounded-lg border border-green-500 transition-all duration-200 hover:transform hover:scale-105">
+                    <i class="fas fa-calendar-day mr-1"></i> Dziś
+                </button>
+            </div>
+            
+            <p class="text-slate-500 mt-2">Stan na dzień: <?= date('d.m.Y', strtotime($selected_date)) ?></p>
         </header>
 
         <!-- Liczniki -->
@@ -204,5 +223,40 @@ foreach ($kpi_goals as &$goal) {
             <p>Dane odświeżane w czasie rzeczywistym</p>
         </footer>
     </div>
+
+    <script>
+        function changeDate(period) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sfid = urlParams.get('sfid');
+            let newDate;
+            
+            const today = new Date();
+            
+            switch(period) {
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    newDate = yesterday.toISOString().split('T')[0];
+                    break;
+                case 'week':
+                    const startOfWeek = new Date(today);
+                    const day = startOfWeek.getDay();
+                    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Poniedziałek jako początek tygodnia
+                    startOfWeek.setDate(diff);
+                    newDate = startOfWeek.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    newDate = startOfMonth.toISOString().split('T')[0];
+                    break;
+                case 'today':
+                default:
+                    newDate = today.toISOString().split('T')[0];
+                    break;
+            }
+            
+            window.location.href = `?sfid=${sfid}&date=${newDate}`;
+        }
+    </script>
 </body>
 </html>
