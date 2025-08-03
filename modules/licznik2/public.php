@@ -182,21 +182,18 @@ foreach ($kpi_goals as &$goal) {
                 </button>
                 <?php endif; ?>
                 
+                <button onclick="changeDate('current_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="current_month">
+                    <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
+                </button>
+                
                 <?php
-                // Sprawdź czy minął już pełny miesiąc (jesteśmy przynajmniej w następnym miesiącu)
+                // Pokaż przycisk "Poprzedni miesiąc" tylko jeśli nie jesteśmy w pierwszym miesiącu roku lub jeśli to nie jest pierwszy rok
                 $current_month = date('n');
                 $current_year = date('Y');
-                $previous_month = $current_month - 1;
-                $previous_year = $current_year;
                 
-                if ($previous_month <= 0) {
-                    $previous_month = 12;
-                    $previous_year--;
-                }
-                
-                // Pokaż przycisk "Ten miesiąc" tylko jeśli jesteśmy przynajmniej w następnym miesiącu
-                if ($current_month > 1 || $current_year > date('Y', strtotime('2025-01-01'))): ?>
-                <button onclick="changeDate('month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="month">
+                // Zawsze pokazuj poprzedni miesiąc (chyba że to styczeń pierwszego roku danych)
+                if (!($current_month == 1 && $current_year == 2025)): ?>
+                <button onclick="changeDate('previous_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="previous_month">
                     <i class="fas fa-calendar-alt mr-1"></i> Poprzedni miesiąc
                 </button>
                 <?php endif; ?>
@@ -338,7 +335,7 @@ foreach ($kpi_goals as &$goal) {
             
             let newDate;
             const today = new Date();
-            const currentMonth = today.getMonth();
+            const currentMonth = today.getMonth(); // 0-11
             const currentYear = today.getFullYear();
             
             switch(period) {
@@ -353,7 +350,14 @@ foreach ($kpi_goals as &$goal) {
                     newDate = startOfCurrentMonth.toISOString().split('T')[0];
                     showNotification('Wyświetlam dane od 1. dnia bieżącego miesiąca dla spójności danych tygodniowych.', 'info');
                     break;
-                case 'month':
+                case 'current_month':
+                    // Od 1. dnia bieżącego miesiąca
+                    const startOfThisMonth = new Date(currentYear, currentMonth, 1);
+                    newDate = startOfThisMonth.toISOString().split('T')[0];
+                    const thisMonthName = startOfThisMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'});
+                    showNotification(`Wyświetlam dane od 1. dnia bieżącego miesiąca (${thisMonthName}).`, 'info');
+                    break;
+                case 'previous_month':
                     // Od 1. dnia poprzedniego miesiąca
                     let prevMonth = currentMonth - 1;
                     let prevYear = currentYear;
@@ -363,7 +367,8 @@ foreach ($kpi_goals as &$goal) {
                     }
                     const startOfPrevMonth = new Date(prevYear, prevMonth, 1);
                     newDate = startOfPrevMonth.toISOString().split('T')[0];
-                    showNotification(`Wyświetlam dane od 1. dnia poprzedniego miesiąca (${startOfPrevMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`, 'info');
+                    const prevMonthName = startOfPrevMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'});
+                    showNotification(`Wyświetlam dane od 1. dnia poprzedniego miesiąca (${prevMonthName}).`, 'info');
                     break;
                 case 'today':
                 default:
@@ -391,11 +396,11 @@ foreach ($kpi_goals as &$goal) {
             const periodParam = urlParams.get('period');
             const currentDate = '<?= $selected_date ?>';
             const today = new Date().toISOString().split('T')[0];
-            const currentMonth = new Date().getMonth();
+            const currentMonth = new Date().getMonth(); // 0-11
             const currentYear = new Date().getFullYear();
-            const startOfMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+            const startOfCurrentMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
             
-            // Oblicz poprzedni miesiąc
+            // Oblicz poprzedni miesiąc poprawnie
             let prevMonth = currentMonth - 1;
             let prevYear = currentYear;
             if (prevMonth < 0) {
@@ -413,10 +418,16 @@ foreach ($kpi_goals as &$goal) {
                 // Jeśli brak parametru, dedukuj na podstawie daty
                 if (currentDate === today) {
                     activePeriod = 'today';
-                } else if (currentDate === startOfMonth) {
-                    activePeriod = 'week';
+                } else if (currentDate === startOfCurrentMonth) {
+                    // Sprawdź czy to tydzień czy bieżący miesiąc na podstawie dnia w miesiącu
+                    const today_day = new Date().getDate();
+                    if (today_day >= 8) {
+                        activePeriod = 'week'; // Może być tydzień
+                    } else {
+                        activePeriod = 'current_month'; // Prawdopodobnie bieżący miesiąc
+                    }
                 } else if (currentDate === startOfPrevMonth) {
-                    activePeriod = 'month';
+                    activePeriod = 'previous_month';
                 } else {
                     const yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
