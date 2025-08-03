@@ -54,53 +54,56 @@ $counters_stmt = $pdo->prepare($counters_query);
 $counters_stmt->execute([$selected_date, $sfid]);
 $counters = $counters_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Pobierz cele KPI
-$kpi_query = "
-    SELECT
-        kg.id,
-        kg.name,
-        kg.total_goal,
-        GROUP_CONCAT(klc.counter_id) as linked_counter_ids
-    FROM licznik_kpi_goals kg
-    LEFT JOIN licznik_kpi_linked_counters klc ON kg.id = klc.kpi_goal_id
-    WHERE kg.sfid_id = ? AND kg.is_active = 1
-    GROUP BY kg.id
-    ORDER BY kg.name
-";
+// Pobierz cele KPI tylko jeśli są liczniki
+$kpi_goals = [];
+if (!empty($counters)) {
+    $kpi_query = "
+        SELECT
+            kg.id,
+            kg.name,
+            kg.total_goal,
+            GROUP_CONCAT(klc.counter_id) as linked_counter_ids
+        FROM licznik_kpi_goals kg
+        LEFT JOIN licznik_kpi_linked_counters klc ON kg.id = klc.kpi_goal_id
+        WHERE kg.sfid_id = ? AND kg.is_active = 1
+        GROUP BY kg.id
+        ORDER BY kg.name
+    ";
 
-$kpi_stmt = $pdo->prepare($kpi_query);
-$kpi_stmt->execute([$sfid]);
-$kpi_goals = $kpi_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $kpi_stmt = $pdo->prepare($kpi_query);
+    $kpi_stmt->execute([$sfid]);
+    $kpi_goals = $kpi_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Oblicz realizację KPI dla miesiąca wybranej daty
-foreach ($kpi_goals as &$goal) {
-    $linkedIds = $goal['linked_counter_ids'] ? explode(',', $goal['linked_counter_ids']) : [];
-    $monthly_total = 0;
-    
-    if (!empty($linkedIds)) {
-        $placeholders = str_repeat('?,', count($linkedIds) - 1) . '?';
-        $realization_query = "
-            SELECT COALESCE(SUM(dv.value), 0) as total
-            FROM licznik_daily_values dv
-            WHERE dv.counter_id IN ($placeholders)
-            AND YEAR(dv.date) = ? AND MONTH(dv.date) = ?
-        ";
+    // Oblicz realizację KPI dla miesiąca wybranej daty
+    foreach ($kpi_goals as &$goal) {
+        $linkedIds = $goal['linked_counter_ids'] ? explode(',', $goal['linked_counter_ids']) : [];
+        $monthly_total = 0;
         
-        $params = array_merge($linkedIds, [$kpi_year, $kpi_month]);
+        if (!empty($linkedIds)) {
+            $placeholders = str_repeat('?,', count($linkedIds) - 1) . '?';
+            $realization_query = "
+                SELECT COALESCE(SUM(dv.value), 0) as total
+                FROM licznik_daily_values dv
+                WHERE dv.counter_id IN ($placeholders)
+                AND YEAR(dv.date) = ? AND MONTH(dv.date) = ?
+            ";
+            
+            $params = array_merge($linkedIds, [$kpi_year, $kpi_month]);
+            
+            // Debug - sprawdź parametry zapytania
+            error_log("KPI Query params: " . json_encode($params) . " for goal: " . $goal['name']);
+            
+            $realization_stmt = $pdo->prepare($realization_query);
+            $realization_stmt->execute($params);
+            $monthly_total = $realization_stmt->fetchColumn();
+            
+            // Debug - sprawdź wynik
+            error_log("Monthly total for goal " . $goal['name'] . ": " . $monthly_total);
+        }
         
-        // Debug - sprawdź parametry zapytania
-        error_log("KPI Query params: " . json_encode($params) . " for goal: " . $goal['name']);
-        
-        $realization_stmt = $pdo->prepare($realization_query);
-        $realization_stmt->execute($params);
-        $monthly_total = $realization_stmt->fetchColumn();
-        
-        // Debug - sprawdź wynik
-        error_log("Monthly total for goal " . $goal['name'] . ": " . $monthly_total);
+        $goal['monthly_total'] = $monthly_total;
+        $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($monthly_total / $goal['total_goal']) * 100) : 0;
     }
-    
-    $goal['monthly_total'] = $monthly_total;
-    $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($monthly_total / $goal['total_goal']) * 100) : 0;
 }
 ?>
 <!DOCTYPE html>
@@ -183,30 +186,14 @@ foreach ($kpi_goals as &$goal) {
                 <button onclick="changeDate('yesterday')" class="date-button text-white px-4 py-2 rounded-lg" data-period="yesterday">
                     <i class="fas fa-chevron-left mr-1"></i> Wczoraj
                 </button>
-                <?php
-                // Sprawdź czy minął już pełny tydzień (7 dni od początku miesiąca)
-                $today_day = date('j');
-                if ($today_day >= 8): ?>
-                <button onclick="changeDate('week')" class="date-button text-white px-4 py-2 rounded-lg" data-period="week">
-                    <i class="fas fa-calendar-week mr-1"></i> Ten tydzień
-                </button>
-                <?php endif; ?>
                 
                 <button onclick="changeDate('current_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="current_month">
                     <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
                 </button>
                 
-                <?php
-                // Pokaż przycisk "Poprzedni miesiąc" tylko jeśli nie jesteśmy w pierwszym miesiącu roku lub jeśli to nie jest pierwszy rok
-                $current_month = date('n');
-                $current_year = date('Y');
-                
-                // Zawsze pokazuj poprzedni miesiąc (chyba że to styczeń pierwszego roku danych)
-                if (!($current_month == 1 && $current_year == 2025)): ?>
                 <button onclick="changeDate('previous_month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="previous_month">
                     <i class="fas fa-calendar-alt mr-1"></i> Poprzedni miesiąc
                 </button>
-                <?php endif; ?>
                 
                 <button onclick="changeDate('today')" class="date-button today text-white px-4 py-2 rounded-lg" data-period="today">
                     <i class="fas fa-calendar-day mr-1"></i> Dziś
@@ -218,7 +205,7 @@ foreach ($kpi_goals as &$goal) {
 
         <!-- Liczniki -->
         <section class="mb-12">
-            <h3 class="text-2xl font-bold text-white mb-6">Liczniki (dziś)</h3>
+            <h3 class="text-2xl font-bold text-white mb-6">Liczniki</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <?php foreach ($counters as $counter): ?>
                 <div class="counter-card p-6">
@@ -242,8 +229,9 @@ foreach ($kpi_goals as &$goal) {
         </section>
 
         <!-- KPI -->
+        <?php if (!empty($kpi_goals)): ?>
         <section>
-            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>) - Debug: rok=<?= $kpi_year ?>, miesiąc=<?= $kpi_month ?></h3>
+            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>)</h3>
             <div class="overflow-x-auto bg-slate-800/70 border border-slate-700 rounded-lg">
                 <table class="min-w-full text-sm text-left text-gray-300">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-800">
@@ -272,6 +260,14 @@ foreach ($kpi_goals as &$goal) {
                 </table>
             </div>
         </section>
+        <?php else: ?>
+        <section>
+            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI</h3>
+            <div class="bg-slate-800/70 border border-slate-700 rounded-lg p-8 text-center">
+                <p class="text-slate-400">Brak zdefiniowanych celów KPI dla tej lokalizacji.</p>
+            </div>
+        </section>
+        <?php endif; ?>
 
         <footer class="text-center text-slate-500 mt-12">
             <p>Dane odświeżane w czasie rzeczywistym</p>
@@ -297,15 +293,14 @@ foreach ($kpi_goals as &$goal) {
             
             setTimeout(() => {
                 notification.remove();
-            }, 8000);
+            }, 5000);
         }
 
         function updateActiveButton(period) {
-            // Usuń aktywną klasę ze wszystkich przycisków (również klasę today)
+            // Usuń aktywną klasę ze wszystkich przycisków
             document.querySelectorAll('.date-button').forEach(btn => {
                 btn.classList.remove('active');
-                // Zachowaj klasę today tylko dla przycisku "Dziś" gdy nie jest aktywny
-                if (!btn.hasAttribute('data-period') || btn.getAttribute('data-period') !== 'today') {
+                if (btn.getAttribute('data-period') !== 'today') {
                     btn.classList.remove('today');
                 }
             });
@@ -314,7 +309,6 @@ foreach ($kpi_goals as &$goal) {
             const activeButton = document.querySelector(`[data-period="${period}"]`);
             if (activeButton) {
                 activeButton.classList.add('active');
-                // Usuń klasę today z przycisku "Dziś" gdy jest aktywny inny przycisk
                 if (period !== 'today') {
                     const todayButton = document.querySelector(`[data-period="today"]`);
                     if (todayButton) {
@@ -324,16 +318,14 @@ foreach ($kpi_goals as &$goal) {
             }
         }
 
-        function changeDate(period) {
-            // Pobierz SFID z URL - obsługa różnych formatów URL
+        function generateUrl(dateParam, period) {
+            // Pobierz SFID z URL
             let sfid;
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Jeśli jest w parametrach URL
             if (urlParams.get('sfid')) {
                 sfid = urlParams.get('sfid');
             } else {
-                // Jeśli URL jest w formacie /wyniki/<SFID>
                 const pathParts = window.location.pathname.split('/');
                 const wynikiIndex = pathParts.indexOf('wyniki');
                 if (wynikiIndex !== -1 && pathParts[wynikiIndex + 1]) {
@@ -343,61 +335,61 @@ foreach ($kpi_goals as &$goal) {
                 }
             }
             
-            let newDate;
+            // Generuj URL w zależności od formatu
+            if (window.location.pathname.includes('/wyniki/')) {
+                const baseUrl = window.location.pathname.split('?')[0];
+                return `${baseUrl}?date=${dateParam}&period=${period}`;
+            } else {
+                return `?sfid=${sfid}&date=${dateParam}&period=${period}`;
+            }
+        }
+
+        function changeDate(period) {
             const today = new Date();
-            const currentMonth = today.getMonth(); // 0-11
             const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth(); // 0-11
+            
+            let dateParam, message = null;
             
             switch(period) {
                 case 'yesterday':
                     const yesterday = new Date(today);
                     yesterday.setDate(yesterday.getDate() - 1);
-                    newDate = yesterday.toISOString().split('T')[0];
+                    dateParam = yesterday.toISOString().split('T')[0];
                     break;
-                case 'week':
-                    // Zawsze od 1. dnia bieżącego miesiąca
-                    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
-                    newDate = startOfCurrentMonth.toISOString().split('T')[0];
-                    showNotification('Wyświetlam dane od 1. dnia bieżącego miesiąca dla spójności danych tygodniowych.', 'info');
-                    break;
+                    
                 case 'current_month':
-                    // Od 1. dnia bieżącego miesiąca
-                    const startOfThisMonth = new Date(currentYear, currentMonth, 1);
-                    newDate = startOfThisMonth.toISOString().split('T')[0];
-                    const thisMonthName = startOfThisMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'});
-                    showNotification(`Wyświetlam dane od 1. dnia bieżącego miesiąca (${thisMonthName}).`, 'info');
+                    dateParam = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                    message = `Wyświetlam dane dla bieżącego miesiąca (${new Date(currentYear, currentMonth).toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`;
                     break;
+                    
                 case 'previous_month':
-                    // Od 1. dnia poprzedniego miesiąca
                     let prevMonth = currentMonth - 1;
                     let prevYear = currentYear;
                     if (prevMonth < 0) {
                         prevMonth = 11;
                         prevYear--;
                     }
-                    const startOfPrevMonth = new Date(prevYear, prevMonth, 1);
-                    newDate = startOfPrevMonth.toISOString().split('T')[0];
-                    const prevMonthName = startOfPrevMonth.toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'});
-                    showNotification(`Wyświetlam dane od 1. dnia poprzedniego miesiąca (${prevMonthName}).`, 'info');
+                    dateParam = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+                    message = `Wyświetlam dane dla poprzedniego miesiąca (${new Date(prevYear, prevMonth).toLocaleDateString('pl-PL', {month: 'long', year: 'numeric'})}).`;
                     break;
+                    
                 case 'today':
                 default:
-                    newDate = today.toISOString().split('T')[0];
+                    dateParam = today.toISOString().split('T')[0];
                     break;
+            }
+            
+            if (message) {
+                showNotification(message, 'info');
             }
             
             // Aktualizuj aktywny przycisk
             updateActiveButton(period);
             
-            // Konstruuj URL w zależności od aktualnego formatu
-            if (window.location.pathname.includes('/wyniki/')) {
-                // Format htaccess
-                const baseUrl = window.location.pathname.split('?')[0];
-                window.location.href = `${baseUrl}?date=${newDate}&period=${period}`;
-            } else {
-                // Standardowy format
-                window.location.href = `?sfid=${sfid}&date=${newDate}&period=${period}`;
-            }
+            // Generuj i przekieruj na nowy URL
+            const newUrl = generateUrl(dateParam, period);
+            window.location.href = newUrl;
         }
 
         // Oznacz aktywny przycisk na podstawie parametru period lub daty
@@ -406,38 +398,26 @@ foreach ($kpi_goals as &$goal) {
             const periodParam = urlParams.get('period');
             const currentDate = '<?= $selected_date ?>';
             const today = new Date().toISOString().split('T')[0];
-            const currentMonth = new Date().getMonth(); // 0-11
-            const currentYear = new Date().getFullYear();
-            const startOfCurrentMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-            
-            // Oblicz poprzedni miesiąc poprawnie
-            let prevMonth = currentMonth - 1;
-            let prevYear = currentYear;
-            if (prevMonth < 0) {
-                prevMonth = 11;
-                prevYear--;
-            }
-            const startOfPrevMonth = new Date(prevYear, prevMonth, 1).toISOString().split('T')[0];
             
             let activePeriod = null;
             
-            // Najpierw sprawdź parametr period z URL
             if (periodParam) {
                 activePeriod = periodParam;
             } else {
-                // Jeśli brak parametru, dedukuj na podstawie daty
+                // Dedukuj na podstawie formatu daty
                 if (currentDate === today) {
                     activePeriod = 'today';
-                } else if (currentDate === startOfCurrentMonth) {
-                    // Sprawdź czy to tydzień czy bieżący miesiąc na podstawie dnia w miesiącu
-                    const today_day = new Date().getDate();
-                    if (today_day >= 8) {
-                        activePeriod = 'week'; // Może być tydzień
+                } else if (currentDate.length === 7) { // Format YYYY-MM
+                    const currentMonth = new Date().getMonth() + 1;
+                    const currentYear = new Date().getFullYear();
+                    const selectedMonth = parseInt(currentDate.split('-')[1]);
+                    const selectedYear = parseInt(currentDate.split('-')[0]);
+                    
+                    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+                        activePeriod = 'current_month';
                     } else {
-                        activePeriod = 'current_month'; // Prawdopodobnie bieżący miesiąc
+                        activePeriod = 'previous_month';
                     }
-                } else if (currentDate === startOfPrevMonth) {
-                    activePeriod = 'previous_month';
                 } else {
                     const yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
@@ -450,7 +430,6 @@ foreach ($kpi_goals as &$goal) {
             if (activePeriod) {
                 updateActiveButton(activePeriod);
             } else {
-                // Jeśli nie ma aktywnego, przywróć klasę today dla przycisku "Dziś"
                 const todayButton = document.querySelector(`[data-period="today"]`);
                 if (todayButton) {
                     todayButton.classList.add('today');
