@@ -266,12 +266,54 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
     font-weight: 600;
 }
 
-.counters-container.grid-view {
-    display: block;
+.counters-container.grid-view #counters-grid {
+    display: grid;
 }
 
-.counters-container.list-view {
+.counters-container.list-view #counters-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.counters-container.list-view .counter-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem;
+    min-height: auto;
+}
+
+.counters-container.list-view .card-header {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+
+.counters-container.list-view .value-display {
     display: none;
+}
+
+.counters-container.list-view .controls {
+    display: flex;
+    margin-top: 0;
+    margin-left: 1rem;
+    gap: 0.5rem;
+}
+
+.counters-container.list-view .goal-status {
+    display: none;
+}
+
+.counters-container.list-view .list-view-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-left: auto;
+    margin-right: 1rem;
+    color: white;
+}
+
+.list-view-value { 
+    display: none; 
 }
 
 .progress-bar {
@@ -557,6 +599,6 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
     };
 </script>
 
-<script src="script.js"></script>
+<script src="attached_assets/script_1754263632477.js"></script>
 
 <?php require_once '../../includes/footer-new.php'; ?>
