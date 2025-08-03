@@ -2,8 +2,8 @@
 let currentCounters = [];
 let currentKpiGoals = [];
 let selectedCounterId = null;
-let currentView = 'grid';
-let currentCategory = 'all';
+let currentView = localStorage.getItem('licznik_view') || 'grid';
+let currentCategory = localStorage.getItem('licznik_category') || 'all';
 let deleteCounterId = null;
 
 // Inicjalizacja po załadowaniu DOM
@@ -24,6 +24,14 @@ function initializeApp() {
     const dateSelector = document.getElementById('date-selector');
     if (dateSelector && !dateSelector.value) {
         dateSelector.value = window.appData.today;
+    }
+    
+    // Przywróć widok i kategorię z localStorage
+    changeView(currentView);
+    
+    const savedCategoryName = localStorage.getItem('licznik_category_name');
+    if (savedCategoryName) {
+        document.getElementById('current-category-name').textContent = savedCategoryName;
     }
 }
 
@@ -82,7 +90,7 @@ function setupKeyboardNavigation() {
                 break;
             case 'k':
                 e.preventDefault();
-                toggleCategoryMenu();
+                cycleThroughCategories();
                 break;
             case 'u':
                 if (selectedCounterId) {
@@ -196,14 +204,20 @@ function createCounterCard(counter, index) {
                 <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
             </div>
             <div class="flex space-x-2">
-                <button onclick="openEditCounterModal(${counter.id})" class="text-gray-400 hover:text-white" title="Ustawienia (U)">
-                    <i class="fas fa-cog"></i>
-                </button>
-                ${window.appData.isAdmin ? `
-                <button onclick="openDeleteModal(${counter.id})" class="text-gray-400 hover:text-red-400" title="Usuń (D)">
-                    <i class="fas fa-trash"></i>
-                </button>
-                ` : ''}
+                <div class="relative">
+                    <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div id="counter-menu-${counter.id}" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                        <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
+                        <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
+                        <div class="border-t border-slate-600 my-1"></div>
+                        <button onclick="openEditCounterModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustawienia (U)</button>
+                        ${window.appData.isAdmin ? `
+                        <button onclick="openDeleteModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700">Usuń (D)</button>
+                        ` : ''}
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -370,6 +384,8 @@ function openEditCounterModal(counterId) {
     document.getElementById('edit-counter-increment').value = counter.increment || 1;
     document.getElementById('edit-counter-category').value = counter.category_id || '';
     document.getElementById('edit-counter-color').value = counter.color || '#374151';
+    document.getElementById('edit-counter-is-currency').checked = counter.type === 'currency';
+    document.getElementById('edit-counter-symbol').value = counter.symbol || '';
 
     showModal(modal);
 }
@@ -761,6 +777,8 @@ function toggleCategoryMenu() {
 // Wybierz kategorię
 function selectCategory(categoryId, categoryName) {
     currentCategory = categoryId;
+    localStorage.setItem('licznik_category', categoryId);
+    localStorage.setItem('licznik_category_name', categoryName);
     document.getElementById('current-category-name').textContent = categoryName;
     document.getElementById('category-menu').classList.remove('show');
     renderCounters();
@@ -795,6 +813,20 @@ function closeAllModals() {
 // Zmień widok
 function changeView(view) {
     currentView = view;
+    localStorage.setItem('licznik_view', view);
+
+    const container = document.getElementById('counters-container');
+    const grid = document.getElementById('counters-grid');
+    
+    if (view === 'list') {
+        container.classList.remove('grid-view');
+        container.classList.add('list-view');
+        grid.className = 'space-y-2';
+    } else {
+        container.classList.remove('list-view');
+        container.classList.add('grid-view');
+        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+    }
 
     // Aktualizuj przyciski
     document.getElementById('grid-view-btn').classList.toggle('bg-gray-500', view === 'grid');
@@ -804,6 +836,8 @@ function changeView(view) {
     document.getElementById('list-view-btn').classList.toggle('bg-gray-500', view === 'list');
     document.getElementById('list-view-btn').classList.toggle('text-white', view === 'list');
     document.getElementById('list-view-btn').classList.toggle('text-gray-300', view !== 'list');
+    
+    renderCounters();
 }
 
 // Przełącz widok
@@ -811,11 +845,72 @@ function toggleView() {
     changeView(currentView === 'grid' ? 'list' : 'grid');
 }
 
+// Przełącz kategorie w pętli
+function cycleThroughCategories() {
+    const categories = ['all', ...window.appData.categories.map(c => c.id.toString())];
+    const categoryNames = ['Wszystkie Kategorie', ...window.appData.categories.map(c => c.name)];
+    
+    const currentIndex = categories.indexOf(currentCategory.toString());
+    const nextIndex = (currentIndex + 1) % categories.length;
+    
+    selectCategory(categories[nextIndex], categoryNames[nextIndex]);
+}
+
 // Escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Otwórz widok publiczny
+function openPublicView() {
+    const sfid = window.appData.currentSfid;
+    const url = `/modules/licznik2/public.php?sfid=${sfid}`;
+    window.open(url, '_blank');
+}
+
+// Przełącz menu licznika
+function toggleCounterMenu(counterId) {
+    // Zamknij wszystkie inne menu
+    document.querySelectorAll('[id^="counter-menu-"]').forEach(menu => {
+        if (menu.id !== `counter-menu-${counterId}`) {
+            menu.classList.add('hidden');
+        }
+    });
+    
+    // Przełącz obecne menu
+    const menu = document.getElementById(`counter-menu-${counterId}`);
+    menu.classList.toggle('hidden');
+}
+
+// Otwórz modal dodawania ilości
+function openAddAmountModal(counterId) {
+    const counter = currentCounters.find(c => c.id == counterId);
+    if (!counter) return;
+    
+    const amount = prompt(`Dodaj ilość do "${counter.title}":`, counter.increment);
+    if (amount !== null && !isNaN(amount)) {
+        adjustCounterValue(counterId, parseInt(amount));
+    }
+    
+    // Zamknij menu
+    document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
+}
+
+// Otwórz modal ustawiania wartości
+function openSetValueModal(counterId) {
+    const counter = currentCounters.find(c => c.id == counterId);
+    if (!counter) return;
+    
+    const newValue = prompt(`Ustaw "${counter.title}" na:`, counter.value);
+    if (newValue !== null && !isNaN(newValue)) {
+        const difference = parseInt(newValue) - counter.value;
+        adjustCounterValue(counterId, difference);
+    }
+    
+    // Zamknij menu
+    document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
 }
 
 // Pokaż powiadomienie

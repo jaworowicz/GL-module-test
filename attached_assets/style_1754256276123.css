@@ -227,6 +227,39 @@
 }
 
 .counters-container.list-view {
+    display: block;
+}
+
+.counters-container.list-view .counter-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.counters-container.list-view .counter-card .counter-value {
+    font-size: 1.5rem;
+    margin-left: auto;
+    margin-right: 1rem;
+    min-width: 60px;
+    text-align: right;
+}
+
+.counters-container.list-view .counter-controls {
+    margin-top: 0;
+    margin-left: 1rem;
+    gap: 0.5rem;
+}
+
+.counters-container.list-view .counter-btn {
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+}
+
+.counters-container.list-view .daily-goal {
     display: none;
 }
 

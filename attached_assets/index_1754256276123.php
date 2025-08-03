@@ -310,7 +310,7 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                 <?php else: ?>
                 <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled title="Tylko dla administratorów">Dodaj Licznik (Admin)</button>
                 <?php endif; ?>
-                <button class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled title="Funkcja w przygotowaniu">Widok Publiczny</button>
+                <button onclick="openPublicView()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">Widok Publiczny</button>
             </div>
 
             <!-- Right side: User, Date, and View controls -->
@@ -427,6 +427,19 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                     <label for="edit-counter-color" class="block text-sm font-medium text-gray-300 mb-1">Kolor karty</label>
                     <input type="color" id="edit-counter-color" class="w-full h-10 p-1 custom-input cursor-pointer">
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="edit-counter-is-currency" class="rounded border-gray-600 bg-gray-700 text-green-600">
+                            <span class="text-sm font-medium text-gray-300">Licznik walutowy</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label for="edit-counter-symbol" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
+                        <input type="text" id="edit-counter-symbol" class="w-full custom-input" placeholder="zł, €, $">
+                    </div>
+                </div>
             </div>
 
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
@@ -491,6 +504,23 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
                 <button onclick="addNewCounter()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj licznik</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mass Correction Modal -->
+    <div id="mass-correction-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <h2 class="text-2xl font-bold mb-4 text-white p-6 border-b border-slate-700">Korekta Masowa</h2>
+            <div class="p-6">
+                <p class="text-sm text-gray-400 mb-4">Wprowadź wartości dla każdego użytkownika, które zostaną dodane do ich dzisiejszych wyników.</p>
+                <div id="mass-correction-body" class="max-h-96 overflow-y-auto">
+                    <!-- Mass correction table will be rendered here -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
+                <button onclick="saveMassCorrection()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Zapisz Korekty</button>
             </div>
         </div>
     </div>
