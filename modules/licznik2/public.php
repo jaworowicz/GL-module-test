@@ -29,6 +29,9 @@ $selected_date_obj = new DateTime($selected_date);
 $kpi_year = $selected_date_obj->format('Y');
 $kpi_month = $selected_date_obj->format('n');
 
+// Debug - sprawdź czy miesiąc jest poprawny
+error_log("Selected date: $selected_date, KPI Year: $kpi_year, KPI Month: $kpi_month");
+
 // Pobierz liczniki dla tej lokalizacji
 $counters_query = "
     SELECT
@@ -84,9 +87,16 @@ foreach ($kpi_goals as &$goal) {
         ";
         
         $params = array_merge($linkedIds, [$kpi_year, $kpi_month]);
+        
+        // Debug - sprawdź parametry zapytania
+        error_log("KPI Query params: " . json_encode($params) . " for goal: " . $goal['name']);
+        
         $realization_stmt = $pdo->prepare($realization_query);
         $realization_stmt->execute($params);
         $monthly_total = $realization_stmt->fetchColumn();
+        
+        // Debug - sprawdź wynik
+        error_log("Monthly total for goal " . $goal['name'] . ": " . $monthly_total);
     }
     
     $goal['monthly_total'] = $monthly_total;
@@ -233,7 +243,7 @@ foreach ($kpi_goals as &$goal) {
 
         <!-- KPI -->
         <section>
-            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>)</h3>
+            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>) - Debug: rok=<?= $kpi_year ?>, miesiąc=<?= $kpi_month ?></h3>
             <div class="overflow-x-auto bg-slate-800/70 border border-slate-700 rounded-lg">
                 <table class="min-w-full text-sm text-left text-gray-300">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-800">
