@@ -195,7 +195,17 @@ function createCounterCard(counter, index) {
 
     // Znajdź cel dzienny dla tego licznika
     const dailyGoal = getDailyGoalForCounter(counter.id);
-    const dailyGoalText = dailyGoal > 0 ? `Cel dzienny: ${dailyGoal}` : '';
+    let dailyGoalText = '';
+    
+    if (dailyGoal && typeof dailyGoal === 'object') {
+        if (dailyGoal.current >= dailyGoal.total) {
+            dailyGoalText = `Cel dzienny: ✅ ${dailyGoal.current}/${dailyGoal.total}`;
+        } else {
+            dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
+        }
+    } else if (dailyGoal > 0) {
+        dailyGoalText = `Cel dzienny: ${dailyGoal}`;
+    }
 
     card.innerHTML = `
         <div class="flex justify-between items-start mb-4">
@@ -247,12 +257,18 @@ function createCounterCard(counter, index) {
     return card;
 }
 
-// Znajdź cel dzienny dla licznika
+// Znajdź cel dzienny dla licznika z uwzględnieniem dzisiejszej realizacji
 function getDailyGoalForCounter(counterId) {
+    const counter = currentCounters.find(c => c.id == counterId);
+    if (!counter) return 0;
+
     for (const kpiGoal of currentKpiGoals) {
         const linkedIds = kpiGoal.linked_counter_ids || [];
         if (linkedIds.includes(counterId.toString()) || linkedIds.includes(counterId)) {
-            return kpiGoal.daily_goal || 0;
+            const dailyGoal = kpiGoal.daily_goal || 0;
+            const currentValue = parseInt(counter.value) || 0;
+            const remaining = Math.max(0, dailyGoal - currentValue);
+            return { total: dailyGoal, remaining: remaining, current: currentValue };
         }
     }
     return 0;
@@ -343,6 +359,8 @@ async function adjustCounterValue(counterId, direction) {
         } else {
             // Odśwież dane KPI po zmianie wartości
             loadKpiData();
+            // Odśwież cele dzienne dla wszystkich liczników
+            updateDailyGoalsDisplay();
         }
     } catch (error) {
         // Przywróć poprzednią wartość w przypadku błędu
@@ -941,6 +959,32 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }, 300);
     }, 3000);
+}
+
+// Funkcja do aktualizacji wyświetlania celów dziennych
+function updateDailyGoalsDisplay() {
+    document.querySelectorAll('.counter-card').forEach(card => {
+        const counterId = card.dataset.counterId;
+        const counter = currentCounters.find(c => c.id == counterId);
+        if (!counter) return;
+
+        const dailyGoal = getDailyGoalForCounter(counter.id);
+        const goalElement = card.querySelector('.daily-goal');
+        
+        if (goalElement) {
+            let dailyGoalText = '';
+            if (dailyGoal && typeof dailyGoal === 'object') {
+                if (dailyGoal.current >= dailyGoal.total) {
+                    dailyGoalText = `Cel dzienny: ✅ ${dailyGoal.current}/${dailyGoal.total}`;
+                } else {
+                    dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
+                }
+            } else if (dailyGoal > 0) {
+                dailyGoalText = `Cel dzienny: ${dailyGoal}`;
+            }
+            goalElement.textContent = dailyGoalText;
+        }
+    });
 }
 
 // Zamknij menu kategorii przy kliknięciu poza nim
