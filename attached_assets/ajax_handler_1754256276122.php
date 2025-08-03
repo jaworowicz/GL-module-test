@@ -13,6 +13,7 @@ $action = $_POST['action'] ?? '';
 
 try {
     switch ($action) {
+        case 'get_counters':
         case 'get_counter_data':
             echo json_encode(getCounterData());
             break;
@@ -21,8 +22,13 @@ try {
             echo json_encode(saveCounterValue());
             break;
 
+        case 'create_counter':
         case 'save_counter_settings':
             echo json_encode(saveCounterSettings());
+            break;
+
+        case 'update_counter':
+            echo json_encode(updateCounterSettings());
             break;
 
         case 'delete_counter':
@@ -33,8 +39,13 @@ try {
             echo json_encode(getKpiData());
             break;
 
+        case 'create_kpi_goal':
         case 'save_kpi_goal':
             echo json_encode(saveKpiGoal());
+            break;
+
+        case 'update_kpi_goal':
+            echo json_encode(updateKpiGoal());
             break;
 
         case 'delete_kpi_goal':
@@ -64,6 +75,7 @@ function getCounterData() {
             c.increment,
             c.color,
             c.category_id,
+            c.is_personal,
             cat.name as category,
             COALESCE(dv.value, 0) as value
         FROM licznik_counters c
@@ -78,7 +90,7 @@ function getCounterData() {
     $stmt->execute([$userId, $date, $_SESSION['sfid_id']]);
     $counters = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    return ['success' => true, 'data' => $counters];
+    return ['success' => true, 'counters' => $counters];
 }
 
 function saveCounterValue() {
@@ -124,6 +136,7 @@ function saveCounterSettings() {
     $increment = max(1, intval($_POST['increment'] ?? 1));
     $categoryId = $_POST['category_id'] ?? null;
     $color = $_POST['color'] ?? '#374151';
+    $isPersonal = $_POST['is_personal'] ?? 0;
 
     if (empty($title)) {
         return ['success' => false, 'message' => 'Nazwa licznika jest wymagana'];
@@ -133,22 +146,61 @@ function saveCounterSettings() {
         // Edycja istniejącego licznika - POPRAWNE NAZWY KOLUMN
         $query = "
             UPDATE licznik_counters
-            SET title = ?, increment = ?, category_id = ?, color = ?
+            SET title = ?, increment = ?, category_id = ?, color = ?, is_personal = ?
             WHERE id = ? AND sfid_id = ?
         ";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$title, $increment, $categoryId, $color, $id, $_SESSION['sfid_id']]);
+        $stmt->execute([$title, $increment, $categoryId, $color, $isPersonal, $id, $_SESSION['sfid_id']]);
     } else {
         // Dodanie nowego licznika - POPRAWNE NAZWY KOLUMN
         $query = "
-            INSERT INTO licznik_counters (sfid_id, title, increment, category_id, color, sort_order)
-            VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM licznik_counters lc WHERE lc.sfid_id = ?))
+            INSERT INTO licznik_counters (sfid_id, title, increment, category_id, color, is_personal, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM licznik_counters lc WHERE lc.sfid_id = ?))
         ";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$_SESSION['sfid_id'], $title, $increment, $categoryId, $color, $_SESSION['sfid_id']]);
+        $stmt->execute([$_SESSION['sfid_id'], $title, $increment, $categoryId, $color, $isPersonal, $_SESSION['sfid_id']]);
     }
 
     return ['success' => true, 'message' => 'Licznik zapisany'];
+}
+
+function updateCounterSettings() {
+    global $pdo;
+
+    // Sprawdź uprawnienia
+    if (!in_array($_SESSION['role'], ['admin', 'superadmin'])) {
+        return ['success' => false, 'message' => 'Brak uprawnień'];
+    }
+
+    $counterId = $_POST['counter_id'] ?? 0;
+    $title = trim($_POST['title'] ?? '');
+    $increment = max(1, intval($_POST['increment'] ?? 1));
+    $categoryId = $_POST['category_id'] ?? null;
+    $isPersonal = $_POST['is_personal'] ?? 0;
+
+    if (empty($title)) {
+        return ['success' => false, 'message' => 'Nazwa licznika jest wymagana'];
+    }
+
+    // Sprawdź czy licznik należy do tej lokalizacji
+    $checkQuery = "SELECT id FROM licznik_counters WHERE id = ? AND sfid_id = ?";
+    $checkStmt = $pdo->prepare($checkQuery);
+    $checkStmt->execute([$counterId, $_SESSION['sfid_id']]);
+
+    if (!$checkStmt->fetch()) {
+        return ['success' => false, 'message' => 'Nieprawidłowy licznik'];
+    }
+
+    // Aktualizuj licznik
+    $query = "
+        UPDATE licznik_counters
+        SET title = ?, increment = ?, category_id = ?, is_personal = ?
+        WHERE id = ? AND sfid_id = ?
+    ";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$title, $increment, $categoryId, $isPersonal, $counterId, $_SESSION['sfid_id']]);
+
+    return ['success' => true, 'message' => 'Licznik zaktualizowany'];
 }
 
 function deleteCounter() {
@@ -193,6 +245,7 @@ function getKpiData() {
             kg.id,
             kg.name,
             kg.total_goal,
+            kg.daily_goal,
             GROUP_CONCAT(klc.counter_id) as linked_counter_ids
         FROM licznik_kpi_goals kg
         LEFT JOIN licznik_kpi_linked_counters klc ON kg.id = klc.kpi_goal_id
@@ -222,21 +275,82 @@ function getKpiData() {
             $params = array_merge($linkedIds, [$year, $monthNum]);
             $realizationStmt = $pdo->prepare($realizationQuery);
             $realizationStmt->execute($params);
-            $realization = $realizationStmt->fetchColumn();
+            $monthlyTotal = $realizationStmt->fetchColumn();
         } else {
-            $realization = 0;
+            $monthlyTotal = 0;
         }
 
-        $goal['realization'] = $realization;
-        $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($realization / $goal['total_goal']) * 100) : 0;
+        $goal['monthly_total'] = $monthlyTotal;
+        $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($monthlyTotal / $goal['total_goal']) * 100) : 0;
         $goal['linked_counter_ids'] = $linkedIds;
 
         // Oblicz cel dzienny (cel miesięczny / dni robocze w miesiącu)
-        $workingDays = getWorkingDaysInMonth($year, $monthNum);
-        $goal['daily_goal'] = $workingDays > 0 ? round($goal['total_goal'] / $workingDays, 1) : 0;
+        if (!$goal['daily_goal']) {
+            $workingDays = getWorkingDaysInMonth($year, $monthNum);
+            $goal['daily_goal'] = $workingDays > 0 ? round($goal['total_goal'] / $workingDays, 1) : 0;
+        }
     }
 
-    return ['success' => true, 'data' => $goals];
+    return ['success' => true, 'kpi_goals' => $goals];
+}
+
+function updateKpiGoal() {
+    global $pdo;
+
+    // Sprawdź uprawnienia
+    if (!in_array($_SESSION['role'], ['admin', 'superadmin'])) {
+        return ['success' => false, 'message' => 'Brak uprawnień'];
+    }
+
+    $goalId = $_POST['goal_id'] ?? 0;
+    $name = trim($_POST['name'] ?? '');
+    $totalGoal = max(0, intval($_POST['total_goal'] ?? 0));
+    $dailyGoal = $_POST['daily_goal'] ? max(0, intval($_POST['daily_goal'])) : null;
+    $linkedCounterIds = json_decode($_POST['linked_counters'] ?? '[]', true);
+
+    if (empty($name)) {
+        return ['success' => false, 'message' => 'Nazwa celu jest wymagana'];
+    }
+
+    // Sprawdź czy cel należy do tej lokalizacji
+    $checkQuery = "SELECT id FROM licznik_kpi_goals WHERE id = ? AND sfid_id = ?";
+    $checkStmt = $pdo->prepare($checkQuery);
+    $checkStmt->execute([$goalId, $_SESSION['sfid_id']]);
+
+    if (!$checkStmt->fetch()) {
+        return ['success' => false, 'message' => 'Nieprawidłowy cel KPI'];
+    }
+
+    $pdo->beginTransaction();
+
+    try {
+        // Aktualizuj cel KPI
+        $query = "UPDATE licznik_kpi_goals SET name = ?, total_goal = ?, daily_goal = ? WHERE id = ? AND sfid_id = ?";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$name, $totalGoal, $dailyGoal, $goalId, $_SESSION['sfid_id']]);
+
+        // Usuń stare powiązania
+        $deleteQuery = "DELETE FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
+        $deleteStmt = $pdo->prepare($deleteQuery);
+        $deleteStmt->execute([$goalId]);
+
+        // Dodaj nowe powiązania
+        if (!empty($linkedCounterIds)) {
+            $insertQuery = "INSERT INTO licznik_kpi_linked_counters (kpi_goal_id, counter_id) VALUES (?, ?)";
+            $insertStmt = $pdo->prepare($insertQuery);
+
+            foreach ($linkedCounterIds as $counterId) {
+                $insertStmt->execute([$goalId, $counterId]);
+            }
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Cel KPI zaktualizowany'];
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Błąd aktualizacji: ' . $e->getMessage()];
+    }
 }
 
 function saveKpiGoal() {
