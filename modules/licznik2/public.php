@@ -24,6 +24,11 @@ $selected_date = $_GET['date'] ?? date('Y-m-d');
 $today = date('Y-m-d');
 $current_month = date('Y-m');
 
+// Ustal miesiąc dla KPI na podstawie wybranej daty
+$selected_date_obj = new DateTime($selected_date);
+$kpi_year = $selected_date_obj->format('Y');
+$kpi_month = $selected_date_obj->format('n');
+
 // Pobierz liczniki dla tej lokalizacji
 $counters_query = "
     SELECT
@@ -64,10 +69,7 @@ $kpi_stmt = $pdo->prepare($kpi_query);
 $kpi_stmt->execute([$sfid]);
 $kpi_goals = $kpi_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Oblicz realizację KPI
-$year = date('Y');
-$month = date('n');
-
+// Oblicz realizację KPI dla miesiąca wybranej daty
 foreach ($kpi_goals as &$goal) {
     $linkedIds = $goal['linked_counter_ids'] ? explode(',', $goal['linked_counter_ids']) : [];
     $monthly_total = 0;
@@ -81,7 +83,7 @@ foreach ($kpi_goals as &$goal) {
             AND YEAR(dv.date) = ? AND MONTH(dv.date) = ?
         ";
         
-        $params = array_merge($linkedIds, [$year, $month]);
+        $params = array_merge($linkedIds, [$kpi_year, $kpi_month]);
         $realization_stmt = $pdo->prepare($realization_query);
         $realization_stmt->execute($params);
         $monthly_total = $realization_stmt->fetchColumn();
@@ -211,7 +213,7 @@ foreach ($kpi_goals as &$goal) {
 
         <!-- KPI -->
         <section>
-            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= date('m.Y') ?>)</h3>
+            <h3 class="text-2xl font-bold text-white mb-6">Cele KPI (<?= $selected_date_obj->format('m.Y') ?>)</h3>
             <div class="overflow-x-auto bg-slate-800/70 border border-slate-700 rounded-lg">
                 <table class="min-w-full text-sm text-left text-gray-300">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-800">
@@ -265,7 +267,7 @@ foreach ($kpi_goals as &$goal) {
             
             setTimeout(() => {
                 notification.remove();
-            }, 4000);
+            }, 8000);
         }
 
         function updateActiveButton(period) {
@@ -335,15 +337,17 @@ foreach ($kpi_goals as &$goal) {
             if (window.location.pathname.includes('/wyniki/')) {
                 // Format htaccess
                 const baseUrl = window.location.pathname.split('?')[0];
-                window.location.href = `${baseUrl}?date=${newDate}`;
+                window.location.href = `${baseUrl}?date=${newDate}&period=${period}`;
             } else {
                 // Standardowy format
-                window.location.href = `?sfid=${sfid}&date=${newDate}`;
+                window.location.href = `?sfid=${sfid}&date=${newDate}&period=${period}`;
             }
         }
 
-        // Oznacz aktywny przycisk na podstawie aktualnej daty
+        // Oznacz aktywny przycisk na podstawie parametru period lub daty
         document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const periodParam = urlParams.get('period');
             const currentDate = '<?= $selected_date ?>';
             const today = new Date().toISOString().split('T')[0];
             const currentMonth = new Date().getMonth();
@@ -352,18 +356,21 @@ foreach ($kpi_goals as &$goal) {
             
             let activePeriod = null;
             
-            if (currentDate === today) {
-                activePeriod = 'today';
-            } else if (currentDate === startOfMonth) {
-                // Może być "week" lub "month"
-                const urlParams = new URLSearchParams(window.location.search);
-                const period = urlParams.get('period');
-                activePeriod = period || 'month';
+            // Najpierw sprawdź parametr period z URL
+            if (periodParam) {
+                activePeriod = periodParam;
             } else {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                if (currentDate === yesterday.toISOString().split('T')[0]) {
-                    activePeriod = 'yesterday';
+                // Jeśli brak parametru, dedukuj na podstawie daty
+                if (currentDate === today) {
+                    activePeriod = 'today';
+                } else if (currentDate === startOfMonth) {
+                    activePeriod = 'month';
+                } else {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (currentDate === yesterday.toISOString().split('T')[0]) {
+                        activePeriod = 'yesterday';
+                    }
                 }
             }
             
