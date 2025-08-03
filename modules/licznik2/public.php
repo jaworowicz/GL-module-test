@@ -136,26 +136,47 @@ foreach ($kpi_goals as &$goal) {
             transition: width 0.3s ease;
             border-radius: 0.25rem;
         }
+        .date-button {
+            background: rgba(71, 85, 105, 0.6);
+            border: 1px solid rgb(100, 116, 139);
+            transition: all 0.2s ease;
+        }
+        .date-button:hover {
+            background: rgba(100, 116, 139, 0.6);
+            transform: scale(1.05);
+        }
+        .date-button.active {
+            background: rgba(34, 197, 94, 0.7);
+            border-color: rgb(34, 197, 94);
+            transform: scale(1.05);
+        }
+        .date-button.today {
+            background: rgba(34, 197, 94, 0.6);
+            border-color: rgb(22, 163, 74);
+        }
+        .date-button.today:hover {
+            background: rgba(34, 197, 94, 0.7);
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-white antialiased">
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-white mb-2"><?= htmlspecialchars($location['name']) ?></h1>
-            <h2 class="text-2xl text-slate-300 mb-4"><?= htmlspecialchars($location['address']) ?></h2>
+            <h2 class="text-2xl text-slate-300 mb-4">Kod lokalizacji: <?= htmlspecialchars($sfid) ?></h2>
             
             <!-- Przyciski zmiany daty -->
             <div class="flex justify-center items-center gap-2 mb-4 flex-wrap">
-                <button onclick="changeDate('yesterday')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                <button onclick="changeDate('yesterday')" class="date-button text-white px-4 py-2 rounded-lg" data-period="yesterday">
                     <i class="fas fa-chevron-left mr-1"></i> Wczoraj
                 </button>
-                <button onclick="changeDate('week')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                <button onclick="changeDate('week')" class="date-button text-white px-4 py-2 rounded-lg" data-period="week">
                     <i class="fas fa-calendar-week mr-1"></i> Ten tydzień
                 </button>
-                <button onclick="changeDate('month')" class="bg-slate-700/60 hover:bg-slate-600/60 text-white px-4 py-2 rounded-lg border border-slate-600 transition-all duration-200 hover:transform hover:scale-105">
+                <button onclick="changeDate('month')" class="date-button text-white px-4 py-2 rounded-lg" data-period="month">
                     <i class="fas fa-calendar-alt mr-1"></i> Ten miesiąc
                 </button>
-                <button onclick="changeDate('today')" class="bg-green-600/60 hover:bg-green-500/60 text-white px-4 py-2 rounded-lg border border-green-500 transition-all duration-200 hover:transform hover:scale-105">
+                <button onclick="changeDate('today')" class="date-button today text-white px-4 py-2 rounded-lg" data-period="today">
                     <i class="fas fa-calendar-day mr-1"></i> Dziś
                 </button>
             </div>
@@ -226,6 +247,40 @@ foreach ($kpi_goals as &$goal) {
     </div>
 
     <script>
+        // Funkcja do wyświetlania powiadomień
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg border max-w-md ${
+                type === 'info' ? 'bg-blue-600/90 border-blue-500 text-white' : 
+                type === 'warning' ? 'bg-yellow-600/90 border-yellow-500 text-white' : 
+                'bg-gray-600/90 border-gray-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 4000);
+        }
+
+        function updateActiveButton(period) {
+            // Usuń aktywną klasę ze wszystkich przycisków
+            document.querySelectorAll('.date-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Dodaj aktywną klasę do wybranego przycisku
+            const activeButton = document.querySelector(`[data-period="${period}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        }
+
         function changeDate(period) {
             // Pobierz SFID z URL - obsługa różnych formatów URL
             let sfid;
@@ -247,6 +302,8 @@ foreach ($kpi_goals as &$goal) {
             
             let newDate;
             const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
             
             switch(period) {
                 case 'yesterday':
@@ -255,14 +312,14 @@ foreach ($kpi_goals as &$goal) {
                     newDate = yesterday.toISOString().split('T')[0];
                     break;
                 case 'week':
-                    const startOfWeek = new Date(today);
-                    const day = startOfWeek.getDay();
-                    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Poniedziałek jako początek tygodnia
-                    startOfWeek.setDate(diff);
-                    newDate = startOfWeek.toISOString().split('T')[0];
+                    // Zawsze od 1. dnia bieżącego miesiąca
+                    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+                    newDate = startOfCurrentMonth.toISOString().split('T')[0];
+                    showNotification('Wyświetlam dane od 1. dnia bieżącego miesiąca dla spójności danych tygodniowych.', 'info');
                     break;
                 case 'month':
-                    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    // Od 1. dnia bieżącego miesiąca
+                    const startOfMonth = new Date(currentYear, currentMonth, 1);
                     newDate = startOfMonth.toISOString().split('T')[0];
                     break;
                 case 'today':
@@ -270,6 +327,9 @@ foreach ($kpi_goals as &$goal) {
                     newDate = today.toISOString().split('T')[0];
                     break;
             }
+            
+            // Aktualizuj aktywny przycisk
+            updateActiveButton(period);
             
             // Konstruuj URL w zależności od aktualnego formatu
             if (window.location.pathname.includes('/wyniki/')) {
@@ -281,6 +341,36 @@ foreach ($kpi_goals as &$goal) {
                 window.location.href = `?sfid=${sfid}&date=${newDate}`;
             }
         }
+
+        // Oznacz aktywny przycisk na podstawie aktualnej daty
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentDate = '<?= $selected_date ?>';
+            const today = new Date().toISOString().split('T')[0];
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const startOfMonth = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+            
+            let activePeriod = null;
+            
+            if (currentDate === today) {
+                activePeriod = 'today';
+            } else if (currentDate === startOfMonth) {
+                // Może być "week" lub "month"
+                const urlParams = new URLSearchParams(window.location.search);
+                const period = urlParams.get('period');
+                activePeriod = period || 'month';
+            } else {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (currentDate === yesterday.toISOString().split('T')[0]) {
+                    activePeriod = 'yesterday';
+                }
+            }
+            
+            if (activePeriod) {
+                updateActiveButton(activePeriod);
+            }
+        });
     </script>
 </body>
 </html>
