@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktywne Liczniki z Kategoriami</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <style>
+        /* Custom styles for a dark theme */
+        body {
+            background-color: #1f2937; /* bg-gray-800 */
+            color: #d1d5db; /* text-gray-300 */
+            font-family: 'Inter', sans-serif;
+        }
+        .counter-card, .list-item {
+            background-color: #374151; /* bg-gray-700 */
+            border: 1px solid #4b5563; /* border-gray-600 */
+            transition: all 0.2s ease-in-out;
+            outline: 3px solid transparent; /* Placeholder for focus */
+        }
+        .counter-card:hover, .list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* Style for the focused/selected card */
+        .counter-card.is-focused {
+            outline-color: #4ade80; /* green-400 */
+        }
+        .control-button {
+            background-color: #4b5563; /* bg-gray-600 */
+            transition: background-color 0.2s ease;
+        }
+        .control-button:hover:not(:disabled) {
+            background-color: #525c6b; /* bg-gray-500 */
+        }
+        .options-menu, .category-menu {
+            display: none;
+            position: absolute;
+            background-color: #4b5563;
+            border: 1px solid #525c6b;
+            z-index: 50;
+            min-width: 220px;
+        }
+        .options-menu a, .category-menu a {
+            color: #d1d5db;
+            transition: background-color 0.2s ease;
+        }
+        .options-menu a:hover, .category-menu a:hover {
+            background-color: #6b7280;
+            color: #ffffff;
+        }
+        .value-positive { color: #22c55e; }
+        .value-negative { color: #ef4444; }
+        .value-zero { color: #d1d5db; }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: #374151; /* bg-gray-700 */
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+        }
+        .modal-content.modal-lg {
+            max-width: 800px;
+        }
+        
+        /* SortableJS ghost class */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #4b5563;
+        }
+        
+        /* List view specific styles */
+        .counters-container.list-view .counter-card .value-display,
+        .counters-container.list-view .counter-card .controls,
+        .counters-container.list-view .counter-card .goal-status {
+             display: none;
+        }
+        .counters-container.list-view .counter-card {
+            flex-direction: row;
+            align-items: center;
+            padding: 1rem;
+        }
+        .counters-container.list-view .counter-card .card-header {
+             flex-grow: 1;
+             margin-bottom: 0;
+        }
+        .counters-container.list-view .counter-card .list-view-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .list-view-value { display: none; } /* Hidden by default */
+        .key-legend span {
+            background-color: #4b5563;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-right: 4px;
+        }
+        /* Style for custom date/select inputs */
+        .custom-input {
+            background-color: #4b5563;
+            border: 1px solid #6b7280;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            color: #d1d5db;
+        }
+        .custom-input:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5);
+        }
+        /* Fix for date picker icon color in dark mode */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="month"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+        }
+        /* Progress bar */
+        .progress-bar {
+            background-color: #4b5563;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+        .progress-bar-inner {
+            background-color: #22c55e;
+            height: 100%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease-in-out;
+        }
+        .details-row {
+            display: none; /* Hidden by default */
+        }
+        .details-row.is-open {
+            display: table-row;
+        }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <!-- Header -->
+    <header class="mb-6">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+            <!-- Left side: Category and admin buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="relative" id="category-dropdown-container">
+                    <button onclick="toggleCategoryMenu()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <span id="current-category-name">Wszystkie Kategorie</span>
+                        <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </button>
+                    <div id="category-menu" class="category-menu rounded-md shadow-lg py-1 mt-2 left-0">
+                        <!-- Categories will be populated by JS -->
+                    </div>
+                </div>
+                <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled title="Funkcja w przygotowaniu">Dodaj Licznik (Admin)</button>
+                <button class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled title="Funkcja w przygotowaniu">Widok Publiczny</button>
+            </div>
+
+            <!-- Right side: User, Date, and View controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                 <button id="unlock-button" class="hidden bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded-lg flex items-center">
+                    <i class="fas fa-lock-open mr-2"></i> Odblokuj edycję
+                </button>
+                <select id="user-selector" class="custom-input text-sm"></select>
+                <input type="date" id="date-selector" class="custom-input text-sm">
+                <div class="flex items-center space-x-2 bg-gray-700 border border-gray-600 rounded-lg p-1">
+                    <button id="add-counter-btn" class="px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-600" onclick="openModal('add-counter-modal')" title="Dodaj nowy licznik osobisty"><i class="fas fa-plus"></i></button>
+                    <button id="grid-view-btn" class="px-3 py-1 rounded-md text-sm bg-gray-500 text-white" onclick="changeView('grid')" title="Widok siatki (V)"><i class="fas fa-th-large"></i></button>
+                    <button id="list-view-btn" class="px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-600" onclick="changeView('list')" title="Widok listy (V)"><i class="fas fa-bars"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Legend -->
+        <div class="key-legend flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-400">
+            <div><span>&uarr;&darr;</span>Nawigacja</div>
+            <div><span>&larr;&rarr; / + / -</span>Zmień wartość</div>
+            <div><span>U</span>Ustawienia</div>
+            <div><span>D</span>Usuń</div>
+            <div><span>V</span>Zmień widok</div>
+            <div><span>K</span>Zmień kategorię</div>
+            <div><span>ESC</span>Zamknij okno</div>
+        </div>
+    </header>
+
+    <!-- Main container for the counters -->
+    <main>
+        <div id="counters-container" class="counters-container grid-view">
+            <div id="counters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Counters will be dynamically generated here by JS -->
+            </div>
+        </div>
+        
+        <!-- Large Tile View Container (hidden by default) -->
+        <div id="large-tile-view" class="hidden">
+             <button class="mb-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded" onclick="goBackToGridView()">
+                <i class="fas fa-arrow-left mr-2"></i> Wróć
+            </button>
+            <div id="large-tile-content"></div>
+        </div>
+
+        <!-- KPI Goals Section -->
+        <section id="kpi-section" class="mt-12">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                 <h2 class="text-2xl font-bold text-white">Cele Zespołowe (KPI)</h2>
+                 <div class="flex items-center gap-2">
+                    <input type="month" id="kpi-month-selector" class="custom-input text-sm">
+                    <button onclick="openModal('mass-correction-modal')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <i class="fas fa-database mr-2"></i> Korekta Masowa
+                    </button>
+                    <button onclick="openModal('kpi-goal-modal')" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Dodaj Cel
+                    </button>
+                 </div>
+            </div>
+            <div class="overflow-x-auto bg-gray-700 rounded-lg">
+                <table class="min-w-full text-sm text-left text-gray-300">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Cel</th>
+                            <th scope="col" class="px-6 py-3">Realizacja (miesiąc)</th>
+                            <th scope="col" class="px-6 py-3">Cel Dzienny (auto)</th>
+                            <th scope="col" class="px-6 py-3">Cel Miesięczny</th>
+                            <th scope="col" class="px-6 py-3 w-1/3">Postęp</th>
+                            <th scope="col" class="px-6 py-3">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kpi-table-body">
+                        <!-- KPI Goals will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+
+    <!-- Modals -->
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-6 text-white">Ustawienia licznika</h2>
+            <input type="hidden" id="modal-counter-id">
+            
+            <div class="mb-4">
+                <label for="counter-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa licznika</label>
+                <input type="text" id="counter-name" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                 <div>
+                    <label for="counter-increment" class="block text-sm font-medium text-gray-300 mb-1">Krok zmiany</label>
+                    <input type="number" id="counter-increment" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="1">
+                </div>
+                 <div>
+                    <label for="counter-category" class="block text-sm font-medium text-gray-300 mb-1">Kategoria</label>
+                    <select id="counter-category" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                       <!-- Category options populated by JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label for="counter-color" class="block text-sm font-medium text-gray-300 mb-1">Kolor karty</label>
+                <input type="color" id="counter-color" class="w-full h-10 p-1 bg-gray-800 border border-gray-600 rounded-md cursor-pointer">
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="saveSettings()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Zapisz ustawienia</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit KPI Goal Modal -->
+    <div id="kpi-goal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="kpi-modal-title" class="text-2xl font-bold mb-6 text-white">Dodaj Cel Zespołowy</h2>
+            <input type="hidden" id="kpi-goal-id">
+            <div class="mb-4">
+                <label for="kpi-goal-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa celu</label>
+                <input type="text" id="kpi-goal-name" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Np. Pozyskanie Miesięczne">
+            </div>
+            <div class="mb-4">
+                <label for="kpi-total-goal" class="block text-sm font-medium text-gray-300 mb-1">Cel Miesięczny (TOTAL)</label>
+                <input type="number" id="kpi-total-goal" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="0">
+            </div>
+            <div class="mb-4">
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Powiązane liczniki</label>
+                 <div id="kpi-linked-counters" class="max-h-40 overflow-y-auto bg-gray-800 p-2 rounded-md border border-gray-600 space-y-2">
+                    <!-- Checkboxes will be rendered here -->
+                 </div>
+            </div>
+             <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="saveKpiGoal()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Zapisz Cel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Adjustment Modal -->
+    <div id="kpi-adjustment-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-6 text-white">Korekta Ręczna KPI</h2>
+            <input type="hidden" id="kpi-adjustment-goal-id">
+            <div class="mb-4">
+                <label for="kpi-adjustment-value" class="block text-sm font-medium text-gray-300 mb-1">Wartość korekty (+/-)</label>
+                <input type="number" id="kpi-adjustment-value" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="np. -10 lub 25">
+            </div>
+            <div class="mb-4">
+                <label for="kpi-adjustment-reason" class="block text-sm font-medium text-gray-300 mb-1">Powód korekty</label>
+                <textarea id="kpi-adjustment-reason" rows="3" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="np. Premia za wyniki"></textarea>
+            </div>
+             <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="saveKpiAdjustment()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Zapisz Korektę</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Details Modal -->
+    <div id="kpi-details-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <h2 id="kpi-details-title" class="text-2xl font-bold mb-4 text-white">Szczegóły Realizacji Celu</h2>
+            <div id="kpi-details-body" class="max-h-96 overflow-y-auto">
+                <!-- Details will be rendered here -->
+            </div>
+            <div class="flex justify-end mt-6">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mass Correction Modal -->
+    <div id="mass-correction-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <h2 class="text-2xl font-bold mb-4 text-white">Korekta Masowa</h2>
+            <p class="text-sm text-gray-400 mb-4">Wprowadź sumy miesięczne dla każdego pracownika. Zostaną one proporcjonalnie rozłożone na dni robocze w wybranym miesiącu.</p>
+            <div id="mass-correction-body" class="max-h-96 overflow-y-auto">
+                <!-- Mass correction table will be rendered here -->
+            </div>
+            <div class="flex justify-end mt-6 space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="saveMassCorrection()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Zapisz Dane</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Category Modal -->
+    <div id="add-category-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-white">Dodaj nową kategorię</h2>
+            <div class="mb-4">
+                <label for="new-category-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa kategorii</label>
+                <input type="text" id="new-category-name" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="np. Sprzedaż">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="addNewCategory()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj</button>
+            </div>
+        </div>
+    </div>
+    
+     <!-- Add Counter Modal -->
+    <div id="add-counter-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-white">Dodaj nowy licznik</h2>
+            <div class="mb-4">
+                <label for="new-counter-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa licznika</label>
+                <input type="text" id="new-counter-name" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="np. Nowe umowy">
+            </div>
+            <div class="mb-4">
+                <label for="new-counter-increment" class="block text-sm font-medium text-gray-300 mb-1">Krok zmiany</label>
+                <input type="number" id="new-counter-increment" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="1">
+            </div>
+            <div class="mb-4">
+                <label for="new-counter-category" class="block text-sm font-medium text-gray-300 mb-1">Kategoria</label>
+                <select id="new-counter-category" class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white">
+                   <!-- Category options populated by JS -->
+                </select>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="addNewCounter()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj licznik</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-4 text-white">Potwierdź usunięcie</h2>
+            <p class="text-gray-300 mb-6">Czy na pewno chcesz trwale usunąć ten licznik?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">Anuluj</button>
+                <button onclick="confirmDeletion()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-500">Tak, usuń</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DATA & STATE ---
+        const initialCounters = [
+            { id: 1, title: 'Pozyskanie TOTAL', value: 0, increment: 1, type: 'number', category: 'BAZA 20004014' },
+            { id: 2, title: 'Pozyskanie FTTH', value: 0, increment: 1, type: 'number', category: 'BAZA 20004014' },
+            { id: 3, title: 'Zatrzymanie', value: 0, increment: 1, type: 'number', category: 'BAZA 20004014' },
+            { id: 4, title: 'Telefony', value: 0, increment: 1, type: 'number', category: 'Ogólne' },
+            { id: 5, title: 'NKS / Akcesoria', value: 0, increment: 1, type: 'number', category: 'Ogólne' },
+            { id: 6, title: 'VAS', value: 0, increment: 1, type: 'number', category: 'Ogólne' },
+            { id: 7, title: 'Odebrane', value: 0, increment: 1, type: 'number', category: 'Ogólne' },
+            { id: 8, title: 'Nieodebrane', value: 0, increment: 1, type: 'number', category: 'Ogólne' },
+            { id: 9, title: 'Δ DELTA KUBA', value: 0, increment: 10, type: 'currency', symbol: 'zł', category: 'DELTA' },
+            { id: 10, title: 'Δ DELTA MARTYNA', value: 0, increment: 10, type: 'currency', symbol: 'zł', category: 'DELTA' },
+        ];
+        
+        const users = [
+            { id: 1, name: 'Jakub Jaworowicz' },
+            { id: 2, name: 'Anna Kowalska' },
+            { id: 3, name: 'Piotr Nowak' },
+        ];
+        
+        const initialKpiGoals = [
+            { id: 101, name: 'Pozyskanie (miesiąc)', totalGoal: 100, linkedCounterIds: [1, 2], adjustments: {} },
+            { id: 102, name: 'Delta (miesiąc)', totalGoal: 500, linkedCounterIds: [9, 10], adjustments: {} },
+            { id: 103, name: 'Aktywności Telefoniczne', totalGoal: 400, linkedCounterIds: [4, 7, 8], adjustments: {} },
+        ];
+
+        let allData = {}; // { 'YYYY-MM-DD': { 'userId': [counters] } }
+        let kpiGoals = [];
+        let categories = [];
+        let currentCategory = 'Wszystkie Kategorie';
+        let focusedCounterId = null;
+        let counterToDeleteId = null;
+        let isEditingLocked = false;
+
+        // --- DOM ELEMENTS ---
+        const countersGrid = document.getElementById('counters-grid');
+        const kpiTableBody = document.getElementById('kpi-table-body');
+        const userSelector = document.getElementById('user-selector');
+        const dateSelector = document.getElementById('date-selector');
+        const kpiMonthSelector = document.getElementById('kpi-month-selector');
+        const unlockButton = document.getElementById('unlock-button');
+        const categoryMenu = document.getElementById('category-menu');
+        const currentCategoryNameEl = document.getElementById('current-category-name');
+        const largeTileView = document.getElementById('large-tile-view');
+        const largeTileContent = document.getElementById('large-tile-content');
+        const countersContainer = document.getElementById('counters-container');
+        const gridViewBtn = document.getElementById('grid-view-btn');
+        const listViewBtn = document.getElementById('list-view-btn');
+
+        // --- FUNCTION DEFINITIONS (All functions defined before use) ---
+        
+        function updateFocusVisuals() {
+            document.querySelectorAll('.counter-card').forEach(card => {
+                if (parseInt(card.dataset.id) === focusedCounterId) {
+                    card.classList.add('is-focused');
+                } else {
+                    card.classList.remove('is-focused');
+                }
+            });
+        }
+        function setFocus(id) {
+            focusedCounterId = id;
+            updateFocusVisuals();
+        }
+
+        function getWorkingDaysInMonth(year, month) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            let workingDays = 0;
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayOfWeek = new Date(year, month - 1, day).getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0=Sunday, 6=Saturday
+                    workingDays++;
+                }
+            }
+            return workingDays > 0 ? workingDays : 1; // Avoid division by zero
+        }
+
+        function getCountersFor(userId, date) {
+            if (!allData[date]) {
+                allData[date] = {};
+            }
+            if (!allData[date][userId]) {
+                allData[date][userId] = JSON.parse(JSON.stringify(initialCounters)).map(c => {
+                    c.value = Math.floor(Math.random() * 3);
+                    return c;
+                });
+            }
+            return allData[date][userId];
+        }
+
+        function saveData() {
+            localStorage.setItem('tallyAllData', JSON.stringify(allData));
+            localStorage.setItem('tallyKpiGoals', JSON.stringify(kpiGoals));
+            localStorage.setItem('tallyCategories', JSON.stringify(categories));
+        }
+
+        function loadData() {
+            const savedAllData = localStorage.getItem('tallyAllData');
+            const savedKpiGoals = localStorage.getItem('tallyKpiGoals');
+            const savedCategories = localStorage.getItem('tallyCategories');
+
+            allData = savedAllData ? JSON.parse(savedAllData) : {};
+            
+            if (savedKpiGoals && JSON.parse(savedKpiGoals).length > 0) {
+                kpiGoals = JSON.parse(savedKpiGoals);
+            } else {
+                kpiGoals = initialKpiGoals;
+            }
+            
+            if (savedCategories) {
+                categories = JSON.parse(savedCategories);
+            } else {
+                 const uniqueCategories = new Set(initialCounters.map(c => c.category));
+                categories = ['Wszystkie Kategorie', ...uniqueCategories];
+            }
+        }
+        
+        function getCurrentCounters() {
+            const currentUserId = userSelector.value;
+            const currentDate = dateSelector.value;
+            return getCountersFor(currentUserId, currentDate);
+        }
+
+        function renderAll() {
+            renderCounters();
+            renderKpiTable();
+            renderCategoryDropdown();
+            updateCategorySelects();
+            renderUserSelector();
+            updateLockState();
+        }
+
+        function renderCounters() {
+            countersGrid.innerHTML = '';
+            let currentCounters = getCurrentCounters();
+            let filteredCounters = currentCategory === 'Wszystkie Kategorie' 
+                ? currentCounters 
+                : currentCounters.filter(c => c.category === currentCategory);
+            
+            const disabledState = isEditingLocked ? 'disabled opacity-50 cursor-not-allowed' : '';
+
+            if (filteredCounters.length === 0) {
+                countersGrid.innerHTML = `<p class="text-gray-400 col-span-full text-center">Brak liczników w tej kategorii.</p>`;
+                return;
+            }
+
+            filteredCounters.forEach(counter => {
+                const firstLinkedKpi = kpiGoals.find(kpi => kpi.linkedCounterIds.includes(counter.id));
+                let goalPlaceholder = '';
+                if (firstLinkedKpi) {
+                    const [year, month] = kpiMonthSelector.value.split('-').map(Number);
+                    const workingDays = getWorkingDaysInMonth(year, month);
+                    const calculatedDailyGoal = Math.ceil(firstLinkedKpi.totalGoal / workingDays);
+                    let dailyStatus = `${counter.value} / ${calculatedDailyGoal}`;
+                    if (counter.value >= calculatedDailyGoal) {
+                        dailyStatus = `OK ✔️`;
+                    }
+                    goalPlaceholder = `<span class="text-xs text-gray-400 mt-2">Dzienny: ${dailyStatus}</span>`;
+                }
+
+                const valueColorClass = counter.value > 0 ? 'value-positive' : counter.value < 0 ? 'value-negative' : 'value-zero';
+                const currencySymbol = counter.type === 'currency' ? `<span class="text-4xl font-semibold text-gray-400 ml-2">${counter.symbol}</span>` : '';
+                
+                const cardHTML = `
+                    <div id="counter-${counter.id}" class="counter-card rounded-lg p-5 flex flex-col justify-between" 
+                         data-id="${counter.id}" style="background-color: ${counter.color || ''}" tabindex="0"
+                         onclick="setFocus(${counter.id})" onfocus="setFocus(${counter.id})">
+                        <div class="card-header flex justify-between items-center mb-4 relative">
+                            <h3 class="counter-title font-semibold text-lg text-gray-200">${counter.title}</h3>
+                            <div class="options-container">
+                                <button class="text-gray-400 hover:text-white focus:outline-none" onclick="toggleMenu(event, this)">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="options-menu rounded-md shadow-lg py-1 right-0">
+                                    <a href="#" onclick="openModal('settings-modal', ${counter.id})" class="block px-4 py-2 text-sm">Ustawienia (U)</a>
+                                    <a href="#" onclick="resetCounter(event, ${counter.id})" class="block px-4 py-2 text-sm">Resetuj licznik</a>
+                                    <div class="border-t border-gray-500 my-1"></div>
+                                    <a href="#" onclick="deleteCounter(event, ${counter.id})" class="block px-4 py-2 text-sm text-red-400">Usuń (D)</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="value-display text-center my-auto cursor-pointer" onclick="event.stopPropagation(); showLargeTile(${counter.id})">
+                            <span class="counter-value text-6xl font-bold ${valueColorClass}">${counter.value}</span>${currencySymbol}
+                        </div>
+                        <div class="list-view-value ml-4 ${valueColorClass}">
+                             ${counter.value} ${counter.symbol || ''}
+                        </div>
+                        <div class="controls flex justify-center items-center mt-6 space-x-8">
+                            <button class="control-button w-14 h-14 rounded-full flex items-center justify-center text-2xl" onclick="event.stopPropagation(); changeValue(${counter.id}, -${counter.increment})" ${disabledState}>
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="control-button w-14 h-14 rounded-full flex items-center justify-center text-2xl" onclick="event.stopPropagation(); changeValue(${counter.id}, ${counter.increment})" ${disabledState}>
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="goal-status text-center mt-4 h-5">
+                            ${goalPlaceholder}
+                        </div>
+                    </div>
+                `;
+                countersGrid.insertAdjacentHTML('beforeend', cardHTML);
+            });
+            updateFocusVisuals();
+        }
+        
+        function renderKpiTable() {
+            kpiTableBody.innerHTML = '';
+            if (kpiGoals.length === 0) {
+                kpiTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-400 py-4">Brak zdefiniowanych celów KPI. Dodaj nowy cel.</td></tr>`;
+                return;
+            }
+
+            const selectedMonth = kpiMonthSelector.value;
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const workingDays = getWorkingDaysInMonth(year, month);
+
+            kpiGoals.forEach(goal => {
+                let monthlyProgress = 0;
+                let dailyProgress = 0;
+                const selectedDay = dateSelector.value;
+
+                for (const date in allData) {
+                    const teamDataForDay = allData[date];
+                    const isCurrentDay = date === selectedDay;
+
+                    if (date.startsWith(selectedMonth)) {
+                        Object.values(teamDataForDay).forEach(userCounters => {
+                            goal.linkedCounterIds.forEach(linkedId => {
+                                const counter = userCounters.find(c => c.id === linkedId);
+                                if (counter) {
+                                    monthlyProgress += counter.value;
+                                    if (isCurrentDay) {
+                                        dailyProgress += counter.value;
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
+                
+                const adjustment = goal.adjustments && goal.adjustments[selectedMonth] ? goal.adjustments[selectedMonth].value : 0;
+                monthlyProgress += adjustment;
+                const calculatedDailyGoal = Math.ceil(goal.totalGoal / workingDays);
+
+                const progressPercent = goal.totalGoal > 0 ? Math.min((monthlyProgress / goal.totalGoal) * 100, 100) : 0;
+                
+                let statusIcon = '<i class="fas fa-times-circle text-gray-500" title="Cel nieosiągnięty"></i>';
+                if (monthlyProgress >= goal.totalGoal) {
+                    statusIcon = '<i class="fas fa-check-circle text-green-400" title="Cel miesięczny osiągnięty"></i>';
+                } else if (dailyProgress >= calculatedDailyGoal) {
+                    statusIcon = '<i class="fas fa-dot-circle text-yellow-400" title="Cel dzienny osiągnięty"></i>';
+                }
+
+                const row = `
+                    <tr class="border-b border-gray-800 hover:bg-gray-600">
+                        <td class="px-6 py-4 font-medium text-white">${statusIcon} <span class="ml-2">${goal.name}</span></td>
+                        <td class="px-6 py-4">
+                            <span>${monthlyProgress}</span>
+                            <button onclick="openModal('kpi-details-modal', ${goal.id})" class="ml-2 text-gray-400 hover:text-white"><i class="fas fa-eye"></i></button>
+                            <button onclick="openModal('kpi-adjustment-modal', ${goal.id})" class="ml-2 text-gray-400 hover:text-white"><i class="fas fa-plus-circle"></i></button>
+                        </td>
+                        <td class="px-6 py-4">${calculatedDailyGoal}</td>
+                        <td class="px-6 py-4">${goal.totalGoal}</td>
+                        <td class="px-6 py-4">
+                            <div class="progress-bar w-full">
+                                <div class="progress-bar-inner" style="width: ${progressPercent}%">${Math.round(progressPercent)}%</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <button onclick="editKpiGoal(${goal.id})" class="text-blue-400 hover:text-blue-300 mr-3"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteKpiGoal(${goal.id})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+                kpiTableBody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function renderCategoryDropdown() {
+            categoryMenu.innerHTML = '';
+            categories.forEach(cat => {
+                categoryMenu.innerHTML += `<a href="#" onclick="selectCategory('${cat}')" class="block px-4 py-2 text-sm">${cat}</a>`;
+            });
+            categoryMenu.innerHTML += `<div class="border-t border-gray-500 my-1"></div>`;
+            categoryMenu.innerHTML += `<a href="#" onclick="openModal('add-category-modal')" class="block px-4 py-2 text-sm">Dodaj nową kategorię...</a>`;
+            currentCategoryNameEl.textContent = currentCategory;
+        }
+        
+        function renderUserSelector() {
+            userSelector.innerHTML = '';
+            users.forEach(user => {
+                userSelector.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+            });
+        }
+
+        function updateCategorySelects() {
+            const selects = document.querySelectorAll('#counter-category, #new-counter-category');
+            selects.forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '';
+                categories.forEach(cat => {
+                    if (cat !== 'Wszystkie Kategorie') {
+                        select.innerHTML += `<option value="${cat}">${cat}</option>`;
+                    }
+                });
+                select.value = currentVal;
+            });
+        }
+
+        function getFilteredCounters() {
+             return currentCategory === 'Wszystkie Kategorie' 
+                ? getCurrentCounters()
+                : getCurrentCounters().filter(c => c.category === currentCategory);
+        }
+
+        function changeValue(id, amount) {
+            if (isEditingLocked) return;
+            let currentCounters = getCurrentCounters();
+            const counter = currentCounters.find(c => c.id === id);
+            if (counter) {
+                counter.value += amount;
+                renderAll();
+                saveData();
+            }
+        }
+        
+        function updateLockState() {
+            const today = new Date().toISOString().slice(0, 10);
+            if (dateSelector.value < today) {
+                isEditingLocked = true;
+                unlockButton.classList.remove('hidden');
+            } else {
+                isEditingLocked = false;
+                unlockButton.classList.add('hidden');
+            }
+            renderCounters();
+        }
+        
+        function saveSettings() {
+            const id = parseInt(document.getElementById('modal-counter-id').value);
+            let currentCounters = getCurrentCounters();
+            const counter = currentCounters.find(c => c.id === id);
+            if (counter) {
+                counter.title = document.getElementById('counter-name').value;
+                counter.increment = parseInt(document.getElementById('counter-increment').value) || 1;
+                counter.category = document.getElementById('counter-category').value;
+                counter.color = document.getElementById('counter-color').value;
+            }
+            closeAllModals();
+            renderAll();
+        }
+        
+        function saveKpiGoal() {
+            const id = document.getElementById('kpi-goal-id').value;
+            const name = document.getElementById('kpi-goal-name').value.trim();
+            if (!name) {
+                alert('Nazwa celu jest wymagana.');
+                return;
+            }
+            
+            const linkedCounterIds = Array.from(document.querySelectorAll('#kpi-linked-counters input:checked')).map(cb => parseInt(cb.value));
+
+            const goalData = {
+                name: name,
+                totalGoal: parseInt(document.getElementById('kpi-total-goal').value) || 0,
+                linkedCounterIds: linkedCounterIds
+            };
+
+            if (id) {
+                const index = kpiGoals.findIndex(g => g.id == id);
+                kpiGoals[index] = { ...kpiGoals[index], ...goalData };
+            } else {
+                kpiGoals.push({ id: Date.now(), adjustments: {}, ...goalData });
+            }
+
+            closeAllModals();
+            renderAll();
+            saveData();
+        }
+        
+        function saveKpiAdjustment() {
+            const goalId = parseInt(document.getElementById('kpi-adjustment-goal-id').value);
+            const value = parseInt(document.getElementById('kpi-adjustment-value').value) || 0;
+            const reason = document.getElementById('kpi-adjustment-reason').value;
+            const selectedMonth = kpiMonthSelector.value;
+
+            const goal = kpiGoals.find(g => g.id === goalId);
+            if (goal) {
+                if (!goal.adjustments) {
+                    goal.adjustments = {};
+                }
+                goal.adjustments[selectedMonth] = { value, reason };
+            }
+            closeAllModals();
+            renderKpiTable();
+            saveData();
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+        }
+
+        function openModal(modalId, itemId = null) {
+            event?.stopPropagation();
+            if (modalId === 'settings-modal' && itemId) {
+                const counter = getCurrentCounters().find(c => c.id === itemId);
+                if(counter) {
+                    document.getElementById('modal-counter-id').value = itemId;
+                    document.getElementById('counter-name').value = counter.title;
+                    document.getElementById('counter-increment').value = counter.increment;
+                    document.getElementById('counter-category').value = counter.category;
+                    document.getElementById('counter-color').value = counter.color || '#374151';
+                }
+            } else if (modalId === 'kpi-goal-modal') {
+                const linkedCountersDiv = document.getElementById('kpi-linked-counters');
+                linkedCountersDiv.innerHTML = '';
+                initialCounters.forEach(c => {
+                    linkedCountersDiv.innerHTML += `
+                        <div>
+                            <input type="checkbox" id="link-counter-${c.id}" value="${c.id}" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600">
+                            <label for="link-counter-${c.id}" class="ml-2 text-sm font-medium text-gray-300">${c.title}</label>
+                        </div>
+                    `;
+                });
+
+                if (itemId) { // Editing
+                    document.getElementById('kpi-modal-title').textContent = 'Edytuj Cel Zespołowy';
+                    const goal = kpiGoals.find(g => g.id === itemId);
+                    document.getElementById('kpi-goal-id').value = goal.id;
+                    document.getElementById('kpi-goal-name').value = goal.name;
+                    document.getElementById('kpi-total-goal').value = goal.totalGoal;
+                    goal.linkedCounterIds.forEach(id => {
+                        const checkbox = document.getElementById(`link-counter-${id}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                } else { // Adding
+                    document.getElementById('kpi-modal-title').textContent = 'Dodaj Cel Zespołowy';
+                    document.getElementById('kpi-goal-id').value = '';
+                    document.getElementById('kpi-goal-name').value = '';
+                    document.getElementById('kpi-total-goal').value = '';
+                }
+            } else if (modalId === 'kpi-adjustment-modal' && itemId) {
+                document.getElementById('kpi-adjustment-goal-id').value = itemId;
+                document.getElementById('kpi-adjustment-value').value = '';
+                document.getElementById('kpi-adjustment-reason').value = '';
+            } else if (modalId === 'kpi-details-modal' && itemId) {
+                const goal = kpiGoals.find(g => g.id === itemId);
+                const selectedMonth = kpiMonthSelector.value;
+                const detailsTitle = document.getElementById('kpi-details-title');
+                const detailsBody = document.getElementById('kpi-details-body');
+                detailsTitle.textContent = `Szczegóły: ${goal.name} (${selectedMonth})`;
+                
+                let userContributions = {};
+                users.forEach(u => {
+                    userContributions[u.id] = { name: u.name, total: 0, week1: 0, week2: 0, week3: 0, week4: 0, week5: 0 };
+                });
+
+                for (const date in allData) {
+                    if (date.startsWith(selectedMonth)) {
+                        const dayOfMonth = parseInt(date.split('-')[2]);
+                        let week = 0;
+                        if (dayOfMonth <= 7) week = 1;
+                        else if (dayOfMonth <= 14) week = 2;
+                        else if (dayOfMonth <= 21) week = 3;
+                        else if (dayOfMonth <= 28) week = 4;
+                        else week = 5;
+
+                        for (const userId in allData[date]) {
+                            if (!userContributions[userId]) continue;
+                            const userCounters = allData[date][userId];
+                            goal.linkedCounterIds.forEach(linkedId => {
+                                const counter = userCounters.find(c => c.id === linkedId);
+                                if (counter) {
+                                    userContributions[userId].total += counter.value;
+                                    userContributions[userId][`week${week}`] += counter.value;
+                                }
+                            });
+                        }
+                    }
+                }
+                
+                let tableHTML = `<div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-300">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-800"><tr>
+                        <th class="px-6 py-3">Pracownik</th>
+                        <th class="px-6 py-3">Tydzień 1 (1-7)</th>
+                        <th class="px-6 py-3">Tydzień 2 (8-14)</th>
+                        <th class="px-6 py-3">Tydzień 3 (15-21)</th>
+                        <th class="px-6 py-3">Tydzień 4 (22-28)</th>
+                        <th class="px-6 py-3">Tydzień 5 (29-31)</th>
+                        <th class="px-6 py-3">Suma</th>
+                    </tr></thead><tbody>`;
+                
+                for(const userId in userContributions) {
+                    const userData = userContributions[userId];
+                    tableHTML += `<tr class="border-b border-gray-800">
+                        <td class="px-6 py-4">${userData.name}</td>
+                        <td class="px-6 py-4">${userData.week1}</td>
+                        <td class="px-6 py-4">${userData.week2}</td>
+                        <td class="px-6 py-4">${userData.week3}</td>
+                        <td class="px-6 py-4">${userData.week4}</td>
+                        <td class="px-6 py-4">${userData.week5}</td>
+                        <td class="px-6 py-4 font-bold">${userData.total}</td>
+                    </tr>`;
+                }
+                tableHTML += `</tbody></table></div>`;
+                detailsBody.innerHTML = tableHTML;
+
+            } else if (modalId === 'mass-correction-modal') {
+                const correctionBody = document.getElementById('mass-correction-body');
+                let tableHTML = `<table class="min-w-full text-sm text-left text-gray-300">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-800"><tr>
+                        <th class="px-6 py-3">Cel KPI</th>`;
+                users.forEach(user => {
+                    tableHTML += `<th class="px-6 py-3">${user.name}</th>`;
+                });
+                tableHTML += `</tr></thead><tbody>`;
+
+                kpiGoals.forEach(goal => {
+                    tableHTML += `<tr class="border-b border-gray-800">
+                        <td class="px-6 py-4">${goal.name}</td>`;
+                    users.forEach(user => {
+                        tableHTML += `<td class="px-6 py-4">
+                            <input type="number" class="custom-input w-24" data-goal-id="${goal.id}" data-user-id="${user.id}" placeholder="0">
+                        </td>`;
+                    });
+                    tableHTML += `</tr>`;
+                });
+                tableHTML += `</tbody></table>`;
+                correctionBody.innerHTML = tableHTML;
+            }
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function toggleMenu(event, button) {
+            event.stopPropagation();
+            const menu = button.nextElementSibling;
+            const isVisible = menu.style.display === 'block';
+            document.querySelectorAll('.options-menu, .category-menu').forEach(m => m.style.display = 'none');
+            menu.style.display = isVisible ? 'none' : 'block';
+        }
+        
+        function toggleCategoryMenu() {
+            const menu = document.getElementById('category-menu');
+            const isVisible = menu.style.display === 'block';
+            document.querySelectorAll('.options-menu').forEach(m => m.style.display = 'none');
+            menu.style.display = isVisible ? 'none' : 'block';
+        }
+        
+        function selectCategory(categoryName) {
+            currentCategory = categoryName;
+            focusedCounterId = null;
+            renderAll();
+        }
+
+        function resetCounter(event, id) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (isEditingLocked) return;
+            const counter = getCurrentCounters().find(c => c.id === id);
+            if (counter) {
+                counter.value = 0;
+                renderAll();
+            }
+        }
+
+        function deleteCounter(event, id) {
+            event?.preventDefault();
+            event?.stopPropagation();
+            counterToDeleteId = id;
+            openModal('delete-confirm-modal');
+        }
+        
+        function confirmDeletion() {
+            if (counterToDeleteId) {
+                let currentCounters = getCurrentCounters();
+                const index = currentCounters.findIndex(c => c.id === counterToDeleteId);
+                if (index > -1) {
+                    currentCounters.splice(index, 1);
+                }
+                if (focusedCounterId === counterToDeleteId) {
+                    focusedCounterId = null;
+                }
+                counterToDeleteId = null;
+                closeAllModals();
+                renderAll();
+            }
+        }
+        
+        function editKpiGoal(id) {
+            openModal('kpi-goal-modal', id);
+        }
+
+        function deleteKpiGoal(id) {
+            if (confirm('Czy na pewno chcesz usunąć ten cel KPI?')) {
+                kpiGoals = kpiGoals.filter(g => g.id !== id);
+                renderKpiTable();
+                saveData();
+            }
+        }
+
+        function addNewCategory() {
+            const newCategoryNameInput = document.getElementById('new-category-name');
+            const newName = newCategoryNameInput.value.trim();
+            if (newName && !categories.includes(newName)) {
+                categories.push(newName);
+                newCategoryNameInput.value = '';
+                closeAllModals();
+                renderAll();
+            } else {
+                alert('Nazwa kategorii nie może być pusta i musi być unikalna.');
+            }
+        }
+        
+        function addNewCounter() {
+            const nameInput = document.getElementById('new-counter-name');
+            const incrementInput = document.getElementById('new-counter-increment');
+            const categorySelect = document.getElementById('new-counter-category');
+            const newName = nameInput.value.trim();
+            const newCategory = categorySelect.value;
+            
+            if (newName && newCategory) {
+                const newCounter = {
+                    id: Date.now(),
+                    title: newName,
+                    value: 0,
+                    increment: parseInt(incrementInput.value) || 1,
+                    type: 'number',
+                    category: newCategory,
+                };
+                getCurrentCounters().push(newCounter);
+                nameInput.value = '';
+                incrementInput.value = '1';
+                closeAllModals();
+                renderAll();
+            } else {
+                alert('Nazwa licznika i kategoria są wymagane.');
+            }
+        }
+        
+        function saveMassCorrection() {
+            const selectedMonth = kpiMonthSelector.value; // "YYYY-MM"
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const workingDays = getWorkingDaysInMonth(year, month);
+            
+            const inputs = document.querySelectorAll('#mass-correction-body input');
+            inputs.forEach(input => {
+                const totalValue = parseInt(input.value) || 0;
+                if (totalValue === 0) return;
+
+                const goalId = parseInt(input.dataset.goalId);
+                const userId = parseInt(input.dataset.userId);
+                const goal = kpiGoals.find(g => g.id === goalId);
+                if (!goal || goal.linkedCounterIds.length === 0) return;
+
+                const valuePerDay = Math.floor(totalValue / workingDays);
+                let remainder = totalValue % workingDays;
+
+                for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
+                    const dateStr = `${selectedMonth}-${String(day).padStart(2, '0')}`;
+                    const dayOfWeek = new Date(dateStr).getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+                    const countersForDay = getCountersFor(userId, dateStr);
+                    const targetCounter = countersForDay.find(c => c.id === goal.linkedCounterIds[0]);
+                    if (targetCounter) {
+                        let dailyAddition = valuePerDay;
+                        if (remainder > 0) {
+                            dailyAddition++;
+                            remainder--;
+                        }
+                        targetCounter.value += dailyAddition;
+                    }
+                }
+            });
+
+            closeAllModals();
+            renderAll();
+            saveData();
+        }
+        
+        function changeView(viewType) {
+            countersContainer.className = `counters-container ${viewType}-view`;
+            if (viewType === 'grid') {
+                countersGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+                gridViewBtn.classList.add('bg-gray-500', 'text-white');
+                listViewBtn.classList.remove('bg-gray-500', 'text-white');
+            } else if (viewType === 'list') {
+                countersGrid.className = 'flex flex-col gap-2';
+                listViewBtn.classList.add('bg-gray-500', 'text-white');
+                gridViewBtn.classList.remove('bg-gray-500', 'text-white');
+            }
+            renderCounters();
+        }
+        
+        function showLargeTile(id) {
+            const counter = getCurrentCounters().find(c => c.id === id);
+            if (!counter) return;
+
+            countersContainer.classList.add('hidden');
+            largeTileView.classList.remove('hidden');
+
+            const valueColorClass = counter.value > 0 ? 'value-positive' : counter.value < 0 ? 'value-negative' : 'value-zero';
+            const currencySymbol = counter.type === 'currency' ? `<span class="text-6xl font-semibold text-gray-400 ml-4">${counter.symbol}</span>` : '';
+
+            largeTileContent.innerHTML = `
+                <div class="counter-card rounded-lg p-8 flex flex-col justify-between" style="background-color: ${counter.color || ''}; min-height: 70vh;">
+                    <div class="text-center"> <h3 class="font-semibold text-3xl text-gray-200">${counter.title}</h3> </div>
+                    <div class="text-center my-auto"> <span class="text-9xl font-bold ${valueColorClass}">${counter.value}</span>${currencySymbol} </div>
+                    <div class="flex justify-center items-center mt-8 space-x-12">
+                        <button class="control-button w-24 h-24 rounded-full flex items-center justify-center text-5xl" onclick="changeValueAndStay(${id}, -${counter.increment})"> <i class="fas fa-minus"></i> </button>
+                        <button class="control-button w-24 h-24 rounded-full flex items-center justify-center text-5xl" onclick="changeValueAndStay(${id}, ${counter.increment})"> <i class="fas fa-plus"></i> </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function changeValueAndStay(id, amount) {
+             const counter = getCurrentCounters().find(c => c.id === id);
+            if (counter) {
+                counter.value += amount;
+                showLargeTile(id);
+                saveData();
+            }
+        }
+
+        function goBackToGridView() {
+            largeTileView.classList.add('hidden');
+            countersContainer.classList.remove('hidden');
+            renderCounters();
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            
+            dateSelector.value = new Date().toISOString().slice(0, 10);
+            dateSelector.addEventListener('change', () => {
+                focusedCounterId = null;
+                updateLockState();
+            });
+            userSelector.addEventListener('change', () => {
+                focusedCounterId = null;
+                renderAll();
+            });
+            
+            kpiMonthSelector.value = new Date().toISOString().slice(0, 7);
+            kpiMonthSelector.addEventListener('change', renderKpiTable);
+
+            unlockButton.addEventListener('click', () => {
+                isEditingLocked = false;
+                unlockButton.classList.add('hidden');
+                renderCounters();
+            });
+            
+            renderAll();
+            
+            if (window.innerWidth > 768) {
+                new Sortable(countersGrid, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function (evt) {
+                        const filtered = getFilteredCounters();
+                        const currentCounters = getCurrentCounters();
+                        const movedItemInfo = filtered[evt.oldIndex];
+                        const originalIndex = currentCounters.findIndex(c => c.id === movedItemInfo.id);
+                        
+                        const [movedItem] = currentCounters.splice(originalIndex, 1);
+                        
+                        if (filtered.length === currentCounters.length + 1) { // Not filtered
+                             currentCounters.splice(evt.newIndex, 0, movedItem);
+                        } else { 
+                            if (evt.newIndex < filtered.length) {
+                                const referenceItemInfo = filtered[evt.newIndex];
+                                const newOriginalIndex = currentCounters.findIndex(c => c.id === referenceItemInfo.id);
+                                currentCounters.splice(newOriginalIndex, 0, movedItem);
+                            } else { 
+                                const referenceItemInfo = filtered[filtered.length - 1];
+                                const newOriginalIndex = currentCounters.findIndex(c => c.id === referenceItemInfo.id);
+                                currentCounters.splice(newOriginalIndex, 0, movedItem);
+                            }
+                        }
+                        
+                        renderCounters();
+                    },
+                });
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAllModals();
+                return;
+            }
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || document.querySelector('.modal-overlay:not(.hidden)')) {
+                return;
+            }
+            if (e.key === 'v' || e.key === 'V') {
+                e.preventDefault();
+                const isGridView = countersContainer.classList.contains('grid-view');
+                changeView(isGridView ? 'list' : 'grid');
+                return;
+            }
+            if (e.key === 'k' || e.key === 'K') {
+                e.preventDefault();
+                const currentIndex = categories.indexOf(currentCategory);
+                const nextIndex = (currentIndex + 1) % categories.length;
+                selectCategory(categories[nextIndex]);
+                return;
+            }
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                const filtered = getFilteredCounters();
+                if (filtered.length === 0) return;
+                let currentIndex = filtered.findIndex(c => c.id === focusedCounterId);
+                if (currentIndex === -1) {
+                    setFocus(filtered[0].id);
+                    document.getElementById(`counter-${filtered[0].id}`).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    return;
+                }
+                let nextIndex;
+                if (e.key === 'ArrowDown') {
+                    nextIndex = (currentIndex + 1) % filtered.length;
+                } else { // ArrowUp
+                    nextIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+                }
+                const nextCounter = filtered[nextIndex];
+                setFocus(nextCounter.id);
+                document.getElementById(`counter-${nextCounter.id}`).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                return;
+            }
+            if (!focusedCounterId) return;
+            const counter = getCurrentCounters().find(c => c.id === focusedCounterId);
+            if (!counter) return;
+            if (e.key === '+' || e.key === '=' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (isEditingLocked) return;
+                changeValue(focusedCounterId, counter.increment);
+            } else if (e.key === '-' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (isEditingLocked) return;
+                changeValue(focusedCounterId, -counter.increment);
+            } else if (e.key === 'u' || e.key === 'U') {
+                e.preventDefault();
+                openModal('settings-modal', focusedCounterId);
+            } else if (e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                deleteCounter(e, focusedCounterId);
+            }
+        });
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.options-container') && !event.target.closest('#category-dropdown-container')) {
+                document.querySelectorAll('.options-menu, .category-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        }
+    </script>
+</body>
+</html>
