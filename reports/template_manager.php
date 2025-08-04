@@ -250,24 +250,59 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
 }
 
 function processTemplatePreview($template, $kpiData, $date) {
+    global $pdo;
+    
     // Zastąp datę raportu
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // RZECZYWISTE ID z bazy danych
-    foreach ($kpiData as $kpiId => $data) {
-        $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
-        $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
-        $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $data['monthly_goal'], $template);
-        $template = str_replace('{KPI_NAME=' . $kpiId . '}', $data['name'], $template);
+    // Pobierz WSZYSTKIE dostępne KPI z bazy danych dla tej lokalizacji
+    $sfidId = $_SESSION['sfid_id'] ?? null;
+    
+    if ($sfidId) {
+        $allKpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
+        $allKpiStmt = $pdo->prepare($allKpiQuery);
+        $allKpiStmt->execute([$sfidId]);
+        $allKpiGoals = $allKpiStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Zastąp placeholdery dla WSZYSTKICH KPI
+        foreach ($allKpiGoals as $kpi) {
+            $kpiId = $kpi['id'];
+            
+            // Jeśli mamy dane dla tego KPI, użyj ich
+            if (isset($kpiData[$kpiId])) {
+                $data = $kpiData[$kpiId];
+                $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
+                $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
+                $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $data['monthly_goal'], $template);
+            } else {
+                // Jeśli nie ma danych, wstaw wartości domyślne
+                $template = str_replace('{KPI_VALUE=' . $kpiId . '}', '0', $template);
+                
+                // Oblicz cel dzienny
+                $dailyGoal = 0;
+                if ($kpi['total_goal'] > 0) {
+                    $monthStart = date('Y-m-01', strtotime($date));
+                    $monthEnd = date('Y-m-t', strtotime($date));
+                    $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
+                    $dailyGoal = ceil($kpi['total_goal'] / $workingDays);
+                }
+                
+                $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $dailyGoal, $template);
+                $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $kpi['total_goal'], $template);
+            }
+            
+            // ZAWSZE zastąp nazwę KPI
+            $template = str_replace('{KPI_NAME=' . $kpiId . '}', htmlspecialchars($kpi['name']), $template);
+        }
     }
 
-    // Usuń nieużywane placeholdery
-    $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Błąd danych</span>', $template);
+    // Usuń TYLKO nieznane placeholdery
+    $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Nieznane KPI</span>', $template);
 
-    $isRealData = !empty($kpiData);
-    $headerText = $isRealData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - DANE PRZYKŁADOWE';
-    $headerColor = $isRealData ? '#16a34a' : '#3b82f6';
+    $hasData = !empty($kpiData);
+    $headerText = $hasData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - POKAZANO ZERA';
+    $headerColor = $hasData ? '#16a34a' : '#f59e0b';
 
     if (strpos($template, '<body') !== false) {
         $template = str_replace('<body', '<body style="border: 3px solid ' . $headerColor . '; margin: 10px; padding: 10px; position: relative;"', $template);
