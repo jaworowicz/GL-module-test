@@ -938,7 +938,8 @@ function changeView(view) {
     } else {
         container.classList.remove('list-view');
         container.classList.add('grid-view');
-        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+        // 4 kolumny na desktop (lg breakpoint)
+        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6';
     }
 
     // Aktualizuj przyciski
@@ -999,31 +1000,62 @@ function toggleCounterMenu(counterId) {
 
 // Otwórz modal dodawania ilości
 function openAddAmountModal(counterId) {
+    const modal = document.getElementById('add-amount-modal');
     const counter = currentCounters.find(c => c.id == counterId);
-    if (!counter) return;
+    if (!modal || !counter) return;
 
-    const amount = prompt(`Dodaj ilość do "${counter.title}":`, counter.increment);
-    if (amount !== null && !isNaN(amount)) {
-        adjustCounterValue(counterId, parseInt(amount));
-    }
+    // Wypełnij dane
+    document.getElementById('add-amount-counter-id').value = counterId;
+    document.getElementById('add-amount-title').textContent = `Dodaj ilość do "${counter.title}"`;
+    document.getElementById('add-amount-value').value = counter.increment;
 
     // Zamknij menu
     document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
+    
+    showModal(modal);
 }
 
 // Otwórz modal ustawiania wartości
 function openSetValueModal(counterId) {
+    const modal = document.getElementById('set-value-modal');
     const counter = currentCounters.find(c => c.id == counterId);
-    if (!counter) return;
+    if (!modal || !counter) return;
 
-    const newValue = prompt(`Ustaw "${counter.title}" na:`, counter.value);
-    if (newValue !== null && !isNaN(newValue)) {
-        const difference = parseInt(newValue) - counter.value;
-        adjustCounterValue(counterId, difference);
-    }
+    // Wypełnij dane
+    document.getElementById('set-value-counter-id').value = counterId;
+    document.getElementById('set-value-title').textContent = `Ustaw "${counter.title}" na`;
+    document.getElementById('set-value-input').value = counter.value;
 
     // Zamknij menu
     document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
+    
+    showModal(modal);
+}
+
+// Zapisz dodaną ilość
+async function saveAddAmount() {
+    const counterId = document.getElementById('add-amount-counter-id').value;
+    const amount = parseInt(document.getElementById('add-amount-value').value);
+
+    if (!isNaN(amount)) {
+        adjustCounterValue(counterId, amount);
+    }
+
+    closeAllModals();
+}
+
+// Zapisz ustawioną wartość
+async function saveSetValue() {
+    const counterId = document.getElementById('set-value-counter-id').value;
+    const newValue = parseInt(document.getElementById('set-value-input').value);
+    const counter = currentCounters.find(c => c.id == counterId);
+
+    if (!isNaN(newValue) && counter) {
+        const difference = newValue - counter.value;
+        adjustCounterValue(counterId, difference);
+    }
+
+    closeAllModals();
 }
 
 // Pokaż powiadomienie
@@ -1087,7 +1119,7 @@ function updateDailyGoalsDisplay() {
     });
 }
 
-// Zamknij menu kategorii przy kliknięciu poza nim
+// Zamknij menu kategorii i menu liczników przy kliknięciu poza nim
 document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('category-dropdown-container');
     const menu = document.getElementById('category-menu');
@@ -1095,6 +1127,13 @@ document.addEventListener('click', function(e) {
     if (dropdown && menu && !dropdown.contains(e.target)) {
         menu.classList.remove('show');
     }
+
+    // Zamknij wszystkie menu liczników jeśli kliknięto poza nimi
+    document.querySelectorAll('[id^="counter-menu-"]').forEach(counterMenu => {
+        if (!counterMenu.contains(e.target) && !e.target.closest('.counter-card')) {
+            counterMenu.classList.add('hidden');
+        }
+    });
 });
 
 function handleDateChange() {

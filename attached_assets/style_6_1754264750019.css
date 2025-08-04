@@ -447,13 +447,40 @@ body {
     border-left: 4px solid rgb(29, 78, 216);
 }
 
-/* Widok listy - POPRAWNE STYLE */
+/* Widok siatki - POPRAWNE STYLE */
 .counters-container.grid-view #counters-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
+.counters-container.grid-view .counter-card {
+    display: block;
+    text-align: center;
+    min-height: 250px;
+    padding: 1.5rem;
+}
+
+.counters-container.grid-view .counter-header {
+    margin-bottom: 1rem;
+}
+
+.counters-container.grid-view .counter-value {
+    font-size: 2.5rem;
+    margin: 1rem 0;
+}
+
+.counters-container.grid-view .counter-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.counters-container.grid-view .daily-goal {
+    display: block;
+}
+
+/* Widok listy - POPRAWNE STYLE */
 .counters-container.list-view #counters-grid {
     display: flex;
     flex-direction: column;
@@ -465,11 +492,13 @@ body {
     align-items: center;
     padding: 1rem 1.5rem;
     min-height: auto;
+    text-align: left;
 }
 
 .counters-container.list-view .counter-header {
     flex: 1;
     margin-right: 1rem;
+    margin-bottom: 0;
 }
 
 .counters-container.list-view .counter-value {
@@ -482,6 +511,7 @@ body {
 .counters-container.list-view .counter-controls {
     margin: 0;
     flex-shrink: 0;
+    gap: 0.25rem;
 }
 
 .counters-container.list-view .counter-btn {

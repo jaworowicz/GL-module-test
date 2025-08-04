@@ -344,7 +344,7 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
     <!-- Main container for the counters -->
     <main>
         <div id="counters-container" class="counters-container grid-view">
-            <div id="counters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div id="counters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Counters will be dynamically generated here by JS -->
             </div>
         </div>
@@ -594,6 +594,42 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
                 <button onclick="saveMassCorrection()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Zapisz Korekty</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Amount Modal -->
+    <div id="add-amount-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="add-amount-title" class="text-xl font-bold mb-4 text-white p-6 border-b border-slate-700">Dodaj ilość</h2>
+            <input type="hidden" id="add-amount-counter-id">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="add-amount-value" class="block text-sm font-medium text-gray-300 mb-1">Ilość do dodania</label>
+                    <input type="number" id="add-amount-value" class="w-full custom-input" placeholder="0">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
+                <button onclick="saveAddAmount()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set Value Modal -->
+    <div id="set-value-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="set-value-title" class="text-xl font-bold mb-4 text-white p-6 border-b border-slate-700">Ustaw wartość</h2>
+            <input type="hidden" id="set-value-counter-id">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="set-value-input" class="block text-sm font-medium text-gray-300 mb-1">Nowa wartość</label>
+                    <input type="number" id="set-value-input" class="w-full custom-input" placeholder="0">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
+                <button onclick="saveSetValue()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-500">Ustaw</button>
             </div>
         </div>
     </div>
