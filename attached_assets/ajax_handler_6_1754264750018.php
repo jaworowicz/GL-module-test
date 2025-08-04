@@ -299,11 +299,8 @@ function getKpiData() {
         $goal['progress_percent'] = $goal['total_goal'] > 0 ? min(100, ($realization / $goal['total_goal']) * 100) : 0;
         $goal['linked_counter_ids'] = $linkedIds;
 
-        // Oblicz cel dzienny (cel miesięczny / dni robocze w miesiącu)
-        if (!$goal['daily_goal']) {
-            $workingDays = getWorkingDaysInMonth($year, $monthNum);
-            $goal['daily_goal'] = $workingDays > 0 ? round($goal['total_goal'] / $workingDays, 1) : 0;
-        }
+        // NOWA LOGIKA: Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację
+        $goal['daily_goal'] = calculateDynamicDailyGoal($goal['total_goal'], $realization, $year, $monthNum, $_SESSION['sfid_id']);
     }
 
     return ['success' => true, 'data' => $goals];
@@ -583,5 +580,59 @@ function getWorkingDaysInMonth($year, $month) {
     }
 
     return $workingDays;
+}
+
+// Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację i pozostałe dni
+function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $month, $sfidId) {
+    global $pdo;
+    
+    // Pobierz dni robocze z tabeli global_working_hours lub oblicz automatycznie
+    $workingDaysQuery = "SELECT working_days FROM global_working_hours WHERE sfid_id = ? AND year = ? AND month = ?";
+    $stmt = $pdo->prepare($workingDaysQuery);
+    $stmt->execute([$sfidId, $year, $month]);
+    $workingDaysData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $totalWorkingDays = $workingDaysData['working_days'] ?? getWorkingDaysInMonth($year, $month);
+    
+    // Oblicz ile dni roboczych już minęło w tym miesiącu (bez niedziel)
+    $today = date('j'); // dzień miesiąca
+    $currentMonth = date('n'); // miesiąc bieżący
+    $currentYear = date('Y'); // rok bieżący
+    
+    $elapsedWorkingDays = 0;
+    $remainingWorkingDays = $totalWorkingDays;
+    
+    // Jeśli to bieżący miesiąc, oblicz ile dni roboczych już minęło
+    if ($year == $currentYear && $month == $currentMonth) {
+        for ($day = 1; $day < $today; $day++) {
+            $dayOfWeek = date('N', mktime(0, 0, 0, $month, $day, $year));
+            if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+                $elapsedWorkingDays++;
+            }
+        }
+        
+        // Oblicz pozostałe dni robocze (włącznie z dzisiaj)
+        $remainingWorkingDays = 0;
+        for ($day = $today; $day <= cal_days_in_month(CAL_GREGORIAN, $month, $year); $day++) {
+            $dayOfWeek = date('N', mktime(0, 0, 0, $month, $day, $year));
+            if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+                $remainingWorkingDays++;
+            }
+        }
+    }
+    
+    // Oblicz ile jeszcze trzeba zrealizować
+    $remainingGoal = max(0, $totalGoal - $currentRealization);
+    
+    // Jeśli nie ma pozostałych dni roboczych, zwróć 0
+    if ($remainingWorkingDays <= 0) {
+        return 0;
+    }
+    
+    // Cel dzienny = pozostały cel / pozostałe dni robocze
+    $dynamicDailyGoal = round($remainingGoal / $remainingWorkingDays, 1);
+    
+    // Minimum 0 (nie może być ujemny)
+    return max(0, $dynamicDailyGoal);
 }
 ?>

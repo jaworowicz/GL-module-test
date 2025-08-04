@@ -203,6 +203,11 @@ function createCounterCard(counter, index) {
         } else {
             dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
         }
+        
+        // Dodaj informację o celu zespołowym jeśli istnieje
+        if (dailyGoal.teamDaily > 0) {
+            dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
+        }
     } else if (dailyGoal > 0) {
         dailyGoalText = `Cel dzienny: ${dailyGoal}`;
     }
@@ -262,7 +267,7 @@ function createCounterCard(counter, index) {
     return card;
 }
 
-// Znajdź cel dzienny dla licznika z uwzględnieniem dzisiejszej realizacji
+// Znajdź cel dzienny dla licznika z uwzględnieniem zespołowej realizacji
 function getDailyGoalForCounter(counterId) {
     const counter = currentCounters.find(c => c.id == counterId);
     if (!counter) return 0;
@@ -270,10 +275,24 @@ function getDailyGoalForCounter(counterId) {
     for (const kpiGoal of currentKpiGoals) {
         const linkedIds = kpiGoal.linked_counter_ids || [];
         if (linkedIds.includes(counterId.toString()) || linkedIds.includes(counterId)) {
-            const dailyGoal = kpiGoal.daily_goal || 0;
-            const currentValue = parseInt(counter.value) || 0;
-            const remaining = Math.max(0, dailyGoal - currentValue);
-            return { total: dailyGoal, remaining: remaining, current: currentValue };
+            // Używamy dynamicznego celu dziennego z serwera (uwzględnia zespołową realizację)
+            const dynamicDailyGoal = kpiGoal.daily_goal || 0;
+            
+            // Oblicz realizację użytkownika dla tego licznika
+            const currentUserValue = parseInt(counter.value) || 0;
+            
+            // Cel dla użytkownika = dynamiczny cel dzienny / liczba aktywnych użytkowników
+            const activeUsersCount = window.appData.users ? window.appData.users.length : 1;
+            const userDailyGoal = Math.ceil(dynamicDailyGoal / activeUsersCount);
+            
+            const remaining = Math.max(0, userDailyGoal - currentUserValue);
+            
+            return { 
+                total: userDailyGoal, 
+                remaining: remaining, 
+                current: currentUserValue,
+                teamDaily: dynamicDailyGoal // cel całego zespołu
+            };
         }
     }
     return 0;
@@ -996,6 +1015,11 @@ function updateDailyGoalsDisplay() {
                     dailyGoalText = `Cel dzienny: ✅ ${dailyGoal.current}/${dailyGoal.total}`;
                 } else {
                     dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
+                }
+                
+                // Dodaj informację o celu zespołowym
+                if (dailyGoal.teamDaily > 0) {
+                    dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
                 }
             } else if (dailyGoal > 0) {
                 dailyGoalText = `Cel dzienny: ${dailyGoal}`;
