@@ -229,6 +229,7 @@
         // Załaduj szablony przy starcie
         document.addEventListener('DOMContentLoaded', function() {
             loadTemplates();
+            loadKpiPlaceholders();
             
             // Auto-podgląd przy pisaniu
             document.getElementById('html-editor').addEventListener('input', debounce(previewTemplate, 500));
@@ -250,6 +251,43 @@
             } catch (error) {
                 console.error('Błąd ładowania szablonów:', error);
             }
+        }
+
+        async function loadKpiPlaceholders() {
+            try {
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=get_kpi_placeholders'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    renderKpiPlaceholders(data.placeholders);
+                }
+            } catch (error) {
+                console.error('Błąd ładowania placeholderów KPI:', error);
+            }
+        }
+
+        function renderKpiPlaceholders(placeholders) {
+            const container = document.querySelector('.placeholders-help');
+            let html = `
+                <strong>Dostępne placeholdery:</strong><br>
+                <div class="placeholder-item">{REPORT_DATE} - Data raportu</div>
+                <div class="placeholder-item">{TODAY} - Dzisiejsza data</div>
+            `;
+            
+            placeholders.forEach(kpi => {
+                html += `<div style="margin-top: 10px; padding: 5px; background: #2d3748; border-radius: 3px;">`;
+                html += `<strong style="color: #63b3ed;">${kpi.name} (ID: ${kpi.id})</strong><br>`;
+                kpi.placeholders.forEach(placeholder => {
+                    html += `<div class="placeholder-item" style="margin-left: 10px; font-size: 11px;">${placeholder}</div>`;
+                });
+                html += `</div>`;
+            });
+            
+            container.innerHTML = html;
         }
 
         function renderTemplatesList() {

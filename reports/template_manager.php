@@ -1,4 +1,3 @@
-
 <?php
 // Sesja i podstawowa autoryzacja
 session_start();
