@@ -1,3 +1,7 @@
+The code changes replace the original previewTemplate function with a simplified version that relies on getRealKpiDataForPreview.
+```
+
+```php
 <?php
 // Sesja i podstawowa autoryzacja
 session_start();
@@ -145,17 +149,8 @@ function previewTemplate($htmlContent, $date) {
         return ['success' => true, 'preview' => '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>'];
     }
 
-    // Pobierz prawdziwe dane KPI z modułu
+    // Pobierz prawdziwe dane KPI z modułu dla aktualnego użytkownika
     $realKpiData = getRealKpiDataForPreview($date, $pdo);
-
-    // Jeśli brak prawdziwych danych, użyj przykładowych
-    if (empty($realKpiData)) {
-        $realKpiData = [
-            1 => ['value' => 25, 'daily_goal' => 30, 'monthly_goal' => 600, 'name' => 'Sprzedaż (przykład)'],
-            2 => ['value' => 45, 'daily_goal' => 40, 'monthly_goal' => 800, 'name' => 'Kontakty (przykład)'],
-            3 => ['value' => 12, 'daily_goal' => 15, 'monthly_goal' => 300, 'name' => 'Oferty (przykład)']
-        ];
-    }
 
     // Przetwórz szablon
     $preview = processTemplatePreview($htmlContent, $realKpiData, $date);
@@ -165,20 +160,22 @@ function previewTemplate($htmlContent, $date) {
 
 function getRealKpiDataForPreview($date, $pdo) {
     try {
-        // Pobierz pierwszą aktywną lokalizację (sfid_id)
-        $sfidQuery = "SELECT DISTINCT sfid_id FROM licznik_kpi_goals WHERE is_active = 1 LIMIT 1";
+        // Pobierz pierwszą aktywną lokalizację (sfid_id) dla aktualnego użytkownika
+        $userId = $_SESSION['user_id']; // Pobierz ID użytkownika z sesji
+
+        $sfidQuery = "SELECT DISTINCT sfid_id FROM licznik_kpi_goals WHERE is_active = 1 AND user_id = ? LIMIT 1";
         $sfidStmt = $pdo->prepare($sfidQuery);
-        $sfidStmt->execute();
+        $sfidStmt->execute([$userId]);
         $sfidId = $sfidStmt->fetchColumn();
 
         if (!$sfidId) {
-            return []; // Brak danych KPI
+            return []; // Brak danych KPI dla tego użytkownika
         }
 
-        // Pobierz cele KPI (maksymalnie 5 do podglądu)
-        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC LIMIT 5";
+        // Pobierz cele KPI (maksymalnie 5 do podglądu) dla tego SFID
+        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 AND user_id = ? ORDER BY id ASC LIMIT 5";
         $kpiStmt = $pdo->prepare($kpiQuery);
-        $kpiStmt->execute([$sfidId]);
+        $kpiStmt->execute([$sfidId, $userId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $kpiData = [];
@@ -289,16 +286,17 @@ function processTemplatePreview($template, $kpiData, $date) {
 
 function getKpiPlaceholders() {
     global $pdo;
-    
+
     try {
-        // Pobierz wszystkie aktywne cele KPI z bazy danych
-        $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 ORDER BY id ASC";
+        // Pobierz wszystkie aktywne cele KPI z bazy danych dla aktualnego użytkownika
+        $userId = $_SESSION['user_id'];
+        $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 AND user_id = ? ORDER BY id ASC";
         $stmt = $pdo->prepare($query);
-        $stmt->execute();
+        $stmt->execute([$userId]);
         $kpiGoals = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $placeholders = [];
-        
+
         foreach ($kpiGoals as $kpi) {
             $placeholders[] = [
                 'id' => $kpi['id'],
@@ -311,12 +309,13 @@ function getKpiPlaceholders() {
                 ]
             ];
         }
-        
+
         return ['success' => true, 'placeholders' => $placeholders];
-        
+
     } catch (Exception $e) {
         error_log("Błąd pobierania placeholderów KPI: " . $e->getMessage());
         return ['success' => false, 'message' => 'Błąd pobierania danych KPI'];
     }
 }
 ?>
+</replit_final_file>

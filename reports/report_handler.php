@@ -134,9 +134,14 @@ function generateReport($templateId, $date, $pdo) {
 
 function getKpiDataForReport($date, $pdo, $limit = null) {
     try {
-        $sfidId = $_SESSION['sfid_id'] ?? 1;
+        // Kontrola bezpieczeństwa - SFID musi być z sesji
+        $sfidId = $_SESSION['sfid_id'] ?? null;
+        if (!$sfidId) {
+            error_log("Brak sfid_id w sesji dla raportu KPI");
+            return [];
+        }
 
-        // Pobierz cele KPI
+        // Pobierz cele KPI dla konkretnego SFID użytkownika
         $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         if ($limit) {
             $kpiQuery .= " LIMIT " . (int)$limit;
