@@ -260,7 +260,6 @@ function getKpiData() {
             kg.id,
             kg.name,
             kg.total_goal,
-            kg.daily_goal,
             GROUP_CONCAT(klc.counter_id) as linked_counter_ids
         FROM licznik_kpi_goals kg
         LEFT JOIN licznik_kpi_linked_counters klc ON kg.id = klc.kpi_goal_id
@@ -300,10 +299,8 @@ function getKpiData() {
         $goal['linked_counter_ids'] = $linkedIds;
 
         // Oblicz cel dzienny (cel miesięczny / dni robocze w miesiącu)
-        if (!$goal['daily_goal']) {
-            $workingDays = getWorkingDaysInMonth($year, $monthNum);
-            $goal['daily_goal'] = $workingDays > 0 ? round($goal['total_goal'] / $workingDays, 1) : 0;
-        }
+        $workingDays = getWorkingDaysInMonth($year, $monthNum);
+        $goal['daily_goal'] = $workingDays > 0 ? round($goal['total_goal'] / $workingDays, 1) : 0;
     }
 
     return ['success' => true, 'data' => $goals];
