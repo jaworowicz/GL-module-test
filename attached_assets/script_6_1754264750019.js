@@ -265,9 +265,9 @@ function createCounterCard(counter, index, viewType = 'grid') {
                     </button>
                 </div>
                 <div class="text-right relative">
-                    <button onclick="toggleCounterMenu(${counter.id}, 'list', event)" class="text-gray-400 hover:text-white" title="Menu">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
+                        <button onclick="toggleCounterMenuList(${counter.id}, event)" class="text-gray-400 hover:text-white" title="Menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
                     <div id="counter-menu-${counter.id}-list" class="counter-menu hidden">
                         <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
                         <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
@@ -856,7 +856,7 @@ async function deleteKpiGoal(goalId) {
             })
         });
 
-        const data = await previous_generation> response.json();
+        const data = await response.json();
 
         if (data.success) {
             showNotification('Cel KPI usunięty pomyślnie', 'success');
@@ -1117,7 +1117,7 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
     });
 
     // Określ prawidłowy identyfikator menu
-    const menuId = viewType === 'list' ? `counter-menu-${counterId}-list` : `counter-menu-${counterId}`;
+    const menuId = viewType === 'grid' ? `counter-menu-${counterId}` : `counter-menu-${counterId}-list`;
     const menu = document.getElementById(menuId);
 
     if (!menu) {
@@ -1168,6 +1168,64 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
         menu.classList.add('hidden');
     }
 }
+// Przełącz menu licznika w widoku listy
+function toggleCounterMenuList(counterId, event) {
+        // Zapobiegaj propagacji eventu
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+
+        // Zamknij wszystkie inne menu
+        document.querySelectorAll('[id^="counter-menu-"]').forEach(menu => {
+            if (menu.id !== `counter-menu-${counterId}` && menu.id !== `counter-menu-${counterId}-list`) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Określ prawidłowy identyfikator menu
+        const menuId = `counter-menu-${counterId}-list`;
+        const menu = document.getElementById(menuId);
+
+        if (!menu) {
+            console.error('Menu nie zostało znalezione:', menuId);
+            return;
+        }
+
+        const isHidden = menu.classList.contains('hidden');
+
+        if (isHidden) {
+            // Pokazuj menu
+            menu.classList.remove('hidden');
+
+            // Pozycjonowanie fixed dla menu w widoku listy
+            const button = event ? event.target.closest('button') : null;
+            if (button) {
+                const rect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.zIndex = '1000';
+
+                // Domyślnie umieść z lewej strony przycisku
+                let leftPos = rect.left - 180;
+
+                // Jeśli menu wychodzi poza lewą krawędź, umieść z prawej strony
+                if (leftPos < 10) {
+                    leftPos = rect.right + 5;
+                }
+
+                // Jeśli nadal wychodzi poza prawą krawędź, wycentruj
+                if (leftPos + 180 > window.innerWidth) {
+                    leftPos = Math.max(10, window.innerWidth - 190);
+                }
+
+                menu.style.left = leftPos + 'px';
+                menu.style.top = rect.top + 'px';
+            }
+        } else {
+            // Ukryj menu
+            menu.classList.add('hidden');
+        }
+    }
 
 // Otwórz modal dodawania ilości
 function openAddAmountModal(counterId) {

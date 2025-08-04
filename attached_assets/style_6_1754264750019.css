@@ -569,19 +569,28 @@ body {
 
 /* Menu kontekstowe licznika */
 .counter-menu {
-    position: fixed;
-    background: rgba(30, 41, 59, 0.95);
+    background: rgba(30, 41, 59, 0.98);
     border: 1px solid rgb(51, 65, 85);
     border-radius: 0.5rem;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(15px);
     z-index: 10000 !important;
     min-width: 180px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     white-space: nowrap;
     display: block !important;
     opacity: 1;
     transform: scale(1);
     transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Menu w widoku siatki */
+.counters-container.grid-view .counter-menu {
+    position: absolute;
+}
+
+/* Menu w widoku listy */
+.counters-container.list-view .counter-menu {
+    position: fixed;
 }
 
 .counter-menu.hidden {
