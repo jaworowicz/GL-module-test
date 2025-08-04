@@ -97,7 +97,13 @@ function setupKeyboardNavigation() {
             case 'u':
                 if (selectedCounterId) {
                     e.preventDefault();
-                    openEditCounterModal(selectedCounterId);
+                    // Sprawdź czy modal jest już otwarty
+                    const modal = document.getElementById('settings-modal');
+                    if (modal && !modal.classList.contains('hidden')) {
+                        closeAllModals();
+                    } else {
+                        openEditCounterModal(selectedCounterId);
+                    }
                 }
                 break;
             case 'd':
@@ -128,7 +134,13 @@ function setupKeyboardNavigation() {
             case 'i':
                 if (selectedCounterId) {
                     e.preventDefault();
-                    openAddAmountModal(selectedCounterId);
+                    // Sprawdź czy modal jest już otwarty
+                    const modal = document.getElementById('add-amount-modal');
+                    if (modal && !modal.classList.contains('hidden')) {
+                        closeAllModals();
+                    } else {
+                        openAddAmountModal(selectedCounterId);
+                    }
                 }
                 break;
         }
@@ -1273,10 +1285,10 @@ function updateDailyGoalsDisplay() {
                         `✅ Osobisty: ${dailyGoal.current}/${dailyGoal.total}` : 
                         `Osobisty: ${dailyGoal.current}/${dailyGoal.total}`;
 
-                    goalContainer.innerHTML = personalGoalText;
+                    goalContainer.innerHTML = `<div class="daily-goal personal">${personalGoalText}</div>`;
 
                     if (dailyGoal.teamDaily > 0) {
-                        goalSummary.innerHTML = `Zespół: ${dailyGoal.teamDaily}`;
+                        goalSummary.innerHTML = `<div class="daily-goal team">Zespół: ${dailyGoal.teamDaily}</div>`;
                     } else {
                         goalSummary.innerHTML = '';
                     }
@@ -1294,10 +1306,10 @@ function updateDailyGoalsDisplay() {
                         `✅ Cel: ${dailyGoal.current}/${dailyGoal.total}` : 
                         `Cel: ${dailyGoal.current}/${dailyGoal.total}`;
 
-                    let goalHtml = `<div class="daily-goal">${personalGoalText}</div>`;
+                    let goalHtml = `<div class="daily-goal personal">${personalGoalText}</div>`;
 
                     if (dailyGoal.teamDaily > 0) {
-                        goalHtml += `<div class="daily-goal">Zespół: ${dailyGoal.teamDaily}</div>`;
+                        goalHtml += `<div class="daily-goal team">Zespół: ${dailyGoal.teamDaily}</div>`;
                     }
 
                     goalContainer.innerHTML = goalHtml;

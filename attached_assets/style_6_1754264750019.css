@@ -40,7 +40,9 @@ body {
 
 /* Karty liczników */
 .counter-card {
-    background: rgba(30, 41, 59, 0.7);
+    background: linear-gradient(-45deg, rgba(15, 32, 39, 0.7), rgba(32, 58, 67, 0.7), rgba(44, 83, 100, 0.7), rgba(28, 61, 82, 0.7));
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
     border: 1px solid rgb(51, 65, 85);
     border-radius: 1rem;
     border-left: 4px solid;
@@ -487,9 +489,6 @@ body {
     text-align: center;
     min-height: 250px;
     padding: 1.5rem;
-    background: linear-gradient(-45deg, rgba(15, 32, 39, 0.7), rgba(32, 58, 67, 0.7), rgba(44, 83, 100, 0.7), rgba(28, 61, 82, 0.7));
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
 }
 
 .counters-container.grid-view .counter-header {
@@ -575,11 +574,11 @@ body {
     border: 1px solid rgb(51, 65, 85);
     border-radius: 0.5rem;
     backdrop-filter: blur(10px);
-    z-index: 1000;
+    z-index: 10000 !important;
     min-width: 180px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     white-space: nowrap;
-    display: block;
+    display: block !important;
     opacity: 1;
     transform: scale(1);
     transition: opacity 0.2s ease, transform 0.2s ease;
