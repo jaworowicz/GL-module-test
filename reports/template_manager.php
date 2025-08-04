@@ -1,7 +1,6 @@
-<?php
-// Sesja i podstawowa autoryzacja
-session_start();
 
+<?php
+session_start();
 require_once __DIR__ . '/../../../includes/db.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 
@@ -99,7 +98,6 @@ function saveTemplate() {
         return ['success' => false, 'message' => 'Nazwa szablonu jest wymagana'];
     }
 
-    // Jeśli to nowy szablon, wygeneruj ID
     if (empty($templateId)) {
         $templateId = 'template_' . time() . '_' . rand(1000, 9999);
     }
@@ -152,10 +150,7 @@ function previewTemplate($htmlContent, $date) {
         return ['success' => true, 'preview' => '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>'];
     }
 
-    // Pobierz prawdziwe dane KPI z modułu dla aktualnego użytkownika
     $realKpiData = getRealKpiDataForPreview($date, $pdo);
-
-    // Przetwórz szablon
     $preview = processTemplatePreview($htmlContent, $realKpiData, $date);
 
     return ['success' => true, 'preview' => $preview];
@@ -163,14 +158,12 @@ function previewTemplate($htmlContent, $date) {
 
 function getRealKpiDataForPreview($date, $pdo) {
     try {
-        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
-            error_log("Brak sfid_id w sesji dla podglądu KPI");
             return [];
         }
 
-        // Pobierz WSZYSTKIE cele KPI dla konkretnego SFID - UŻYJ RZECZYWISTYCH ID Z BAZY
+        // Pobierz WSZYSTKIE cele KPI dla lokalizacji
         $kpiQuery = "SELECT id, name, total_goal, sfid_id FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
@@ -185,12 +178,11 @@ function getRealKpiDataForPreview($date, $pdo) {
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // POBIERZ WARTOŚCI DLA CAŁEGO ZESPOŁU Z LOKALIZACJI - nie tylko dla jednego użytkownika
             $totalValue = 0;
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
                 
-                // Pobierz wszystkich użytkowników z tej samej lokalizacji (sfid_id)
+                // Pobierz wartości dla CAŁEGO ZESPOŁU z lokalizacji
                 $teamQuery = "SELECT DISTINCT lc.id
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
@@ -248,7 +240,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
 
     while ($start <= $end) {
         $dayOfWeek = $start->format('N');
-        if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+        if ($dayOfWeek < 6) {
             $workingDays++;
         }
         $start->add(new DateInterval('P1D'));
@@ -262,13 +254,7 @@ function processTemplatePreview($template, $kpiData, $date) {
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // Jeśli brak danych KPI, wyświetl błąd dla wszystkich placeholderów
-    if (empty($kpiData)) {
-        $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Błąd danych</span>', $template);
-        return $template;
-    }
-
-    // UŻYJ RZECZYWISTYCH ID Z SZABLONU - bez mapowania pozycyjnego
+    // RZECZYWISTE ID z bazy danych
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
@@ -276,13 +262,10 @@ function processTemplatePreview($template, $kpiData, $date) {
         $template = str_replace('{KPI_NAME=' . $kpiId . '}', $data['name'], $template);
     }
 
-    // Usuń nieużywane placeholdery - pokaż "Błąd danych" 
+    // Usuń nieużywane placeholdery
     $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Błąd danych</span>', $template);
 
-    // Sprawdź czy to są prawdziwe dane czy przykładowe
-    $isRealData = !empty($kpiData) && (!isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false));
-
-    // Dodaj informację o podglądzie
+    $isRealData = !empty($kpiData);
     $headerText = $isRealData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - DANE PRZYKŁADOWE';
     $headerColor = $isRealData ? '#16a34a' : '#3b82f6';
 
@@ -291,7 +274,6 @@ function processTemplatePreview($template, $kpiData, $date) {
         $template = str_replace('<body', '<body><div style="position: absolute; top: 0; left: 0; right: 0; background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold;">' . $headerText . '</div><div style="margin-top: 50px;"', $template);
         $template = str_replace('</body>', '</div></body>', $template);
     } else {
-        // Jeśli brak znacznika body, dodaj header na początku
         $template = '<div style="background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">' . $headerText . '</div>' . $template;
     }
 
@@ -302,14 +284,12 @@ function getKpiPlaceholders() {
     global $pdo;
 
     try {
-        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
-            error_log("Brak sfid_id w sesji dla placeholderów KPI");
             return ['success' => false, 'message' => 'Brak dostępu do lokalizacji'];
         }
 
-        // Pobierz WSZYSTKIE aktywne cele KPI dla konkretnego SFID
+        // Pobierz WSZYSTKIE aktywne cele KPI dla lokalizacji
         $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 AND sfid_id = ? ORDER BY id ASC";
         $stmt = $pdo->prepare($query);
         $stmt->execute([$sfidId]);

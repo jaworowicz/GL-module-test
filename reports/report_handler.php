@@ -1,12 +1,11 @@
 
 <?php
+session_start();
 require_once '../../../includes/auth.php';
 require_once '../../../includes/db.php';
 
 auth_require_login();
 header('Content-Type: application/json');
-
-global $pdo;
 
 $action = $_POST['action'] ?? '';
 
@@ -62,6 +61,7 @@ function getCustomTemplates() {
 
 function getReportPreview($templateId, $date) {
     global $pdo;
+    
     try {
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
@@ -76,17 +76,8 @@ function getReportPreview($templateId, $date) {
             $htmlContent = file_get_contents($templatePath);
         }
 
-        $kpiData = getKpiDataForReport($date);
+        $kpiData = getKpiDataForReport($date, $pdo);
         $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
-
-        if (file_exists($customTemplateFile)) {
-            return ['success' => true, 'preview' => $preview];
-        }
-
-        $preview = preg_replace('/<html.*?<body[^>]*>/s', '', $preview);
-        $preview = preg_replace('/<\/body>.*?<\/html>/s', '', $preview);
-        $preview = preg_replace('/<head>.*?<\/head>/s', '', $preview);
-        $preview = str_replace('<!DOCTYPE html>', '', $preview);
 
         return ['success' => true, 'preview' => $preview];
 
@@ -97,6 +88,7 @@ function getReportPreview($templateId, $date) {
 
 function generateReport($templateId, $date) {
     global $pdo;
+    
     try {
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
@@ -111,7 +103,7 @@ function generateReport($templateId, $date) {
             $htmlContent = file_get_contents($templatePath);
         }
 
-        $kpiData = getKpiDataForReport($date);
+        $kpiData = getKpiDataForReport($date, $pdo);
         $reportHtml = processReportTemplate($htmlContent, $kpiData, $date, false);
 
         return ['success' => true, 'html' => $reportHtml];
@@ -121,16 +113,14 @@ function generateReport($templateId, $date) {
     }
 }
 
-function getKpiDataForReport($date) {
-    global $pdo;
+function getKpiDataForReport($date, $pdo) {
     try {
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
-            error_log("Brak sfid_id w sesji dla raportu KPI");
             return [];
         }
 
-        // Pobierz WSZYSTKIE cele KPI dla lokalizacji - RZECZYWISTE ID
+        // Pobierz WSZYSTKIE cele KPI dla lokalizacji
         $kpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
@@ -184,7 +174,7 @@ function getKpiDataForReport($date) {
                 $dailyGoal = ceil($goal['total_goal'] / $workingDays);
             }
 
-            // UŻYJ RZECZYWISTEGO ID Z BAZY - nie pozycyjnego
+            // RZECZYWISTE ID z bazy
             $kpiData[$goal['id']] = [
                 'value' => $totalValue,
                 'daily_goal' => $dailyGoal,
@@ -206,7 +196,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // UŻYJ RZECZYWISTYCH ID Z BAZY DANYCH - nie pozycyjnych
+    // RZECZYWISTE ID z bazy danych
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
