@@ -1,4 +1,3 @@
-
 <?php
 // Sesja i podstawowa autoryzacja
 session_start();
@@ -251,7 +250,7 @@ function processTemplatePreview($template, $kpiData, $date) {
         return $template;
     }
 
-    // Zastąp placeholdery KPI - używaj rzeczywistych ID z bazy danych
+    // UŻYJ RZECZYWISTYCH ID Z SZABLONU - bez mapowania pozycyjnego
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);

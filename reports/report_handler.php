@@ -1,4 +1,3 @@
-
 <?php
 require_once '../../../includes/auth.php';
 require_once '../../../includes/db.php';
@@ -205,7 +204,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // Zastąp placeholdery KPI - używaj rzeczywistych ID z bazy danych
+    // UŻYJ RZECZYWISTYCH ID Z SZABLONU - bez mapowania pozycyjnego  
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
