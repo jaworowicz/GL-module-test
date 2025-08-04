@@ -1,7 +1,4 @@
-The code replaces the placeholder replacement logic in the processReportTemplate function to use actual KPI IDs instead of positional indexes.
-```
 
-```php
 <?php
 require_once '../../../includes/auth.php';
 require_once '../../../includes/db.php';
@@ -240,4 +237,3 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
     return $workingDays;
 }
 ?>
-</replit_final_file>
