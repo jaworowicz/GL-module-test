@@ -260,7 +260,6 @@ function getKpiData() {
             kg.id,
             kg.name,
             kg.total_goal,
-            kg.daily_goal,
             GROUP_CONCAT(klc.counter_id) as linked_counter_ids
         FROM licznik_kpi_goals kg
         LEFT JOIN licznik_kpi_linked_counters klc ON kg.id = klc.kpi_goal_id

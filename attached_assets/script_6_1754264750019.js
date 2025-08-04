@@ -5,11 +5,13 @@ let selectedCounterId = null;
 let currentView = localStorage.getItem('licznik_view') || 'grid';
 let currentCategory = localStorage.getItem('licznik_category') || 'all';
 let deleteCounterId = null;
+let isToday = true;
 
 // Inicjalizacja po załadowaniu DOM
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
+    setupKeyboardNavigation();
     loadCounterData();
     loadKpiData();
     setupKeyboardNavigation();
@@ -131,6 +133,8 @@ function setupKeyboardNavigation() {
 async function loadCounterData() {
     const userId = document.getElementById('user-selector').value;
     const date = document.getElementById('date-selector').value;
+    const today = new Date().toISOString().split('T')[0];
+    isToday = date === today;
 
     try {
         const response = await fetch('ajax_handler.php', {
@@ -203,7 +207,7 @@ function createCounterCard(counter, index) {
         } else {
             dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
         }
-        
+
         // Dodaj informację o celu zespołowym jeśli istnieje
         if (dailyGoal.teamDaily > 0) {
             dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
@@ -215,6 +219,9 @@ function createCounterCard(counter, index) {
     // Obsługa liczników walutowych
     const currencySymbol = counter.type === 'currency' && counter.symbol ?
         `<span class="currency-symbol">${counter.symbol}</span>` : '';
+
+    const controlsDisabled = !isToday;
+    const controlsOpacity = controlsDisabled ? 'opacity-50 pointer-events-none' : '';
 
     card.innerHTML = `
         <div class="counter-header">
@@ -243,11 +250,11 @@ function createCounterCard(counter, index) {
 
         <div class="counter-value" id="counter-value-${counter.id}">${counter.value}${currencySymbol}</div>
 
-        <div class="counter-controls">
-            <button class="counter-btn minus" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz (←/-)">
+        <div class="counter-controls ${controlsOpacity}">
+            <button class="counter-btn minus" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz (←/-)"  ${controlsDisabled ? 'disabled' : ''}>
                 <i class="fas fa-minus"></i>
             </button>
-            <button class="counter-btn plus" onclick="adjustCounterValue(${counter.id}, 1)" title="Zwiększ (→/+)">
+            <button class="counter-btn plus" onclick="adjustCounterValue(${counter.id}, 1)" title="Zwiększ (→/+)"  ${controlsDisabled ? 'disabled' : ''}>
                 <i class="fas fa-plus"></i>
             </button>
         </div>
@@ -273,16 +280,16 @@ function getDailyGoalForCounter(counterId) {
         if (linkedIds.includes(counterId.toString()) || linkedIds.includes(counterId)) {
             // Używamy dynamicznego celu dziennego z serwera (uwzględnia zespołową realizację)
             const dynamicDailyGoal = kpiGoal.daily_goal || 0;
-            
+
             // Oblicz realizację użytkownika dla tego licznika
             const currentUserValue = parseInt(counter.value) || 0;
-            
+
             // Cel dla użytkownika = dynamiczny cel dzienny / liczba aktywnych użytkowników
             const activeUsersCount = window.appData.users ? window.appData.users.length : 1;
             const userDailyGoal = Math.ceil(dynamicDailyGoal / activeUsersCount);
-            
+
             const remaining = Math.max(0, userDailyGoal - currentUserValue);
-            
+
             return { 
                 total: userDailyGoal, 
                 remaining: remaining, 
@@ -333,6 +340,11 @@ function navigateCounters(direction) {
 
 // Zmiana wartości licznika
 async function adjustCounterValue(counterId, direction) {
+    if (!isToday) {
+        showNotification('Można edytować wartości tylko dla dzisiejszej daty', 'warning');
+        return;
+    }
+
     const counter = currentCounters.find(c => c.id == counterId);
     if (!counter) return;
 
@@ -1062,7 +1074,7 @@ function updateDailyGoalsDisplay() {
                 } else {
                     dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
                 }
-                
+
                 // Dodaj informację o celu zespołowym
                 if (dailyGoal.teamDaily > 0) {
                     dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
@@ -1084,3 +1096,120 @@ document.addEventListener('click', function(e) {
         menu.classList.remove('show');
     }
 });
+
+function handleDateChange() {
+    const dateSelector = document.getElementById('date-selector');
+    selectedDate = dateSelector.value;
+    const today = new Date().toISOString().split('T')[0];
+    isToday = selectedDate === today;
+    loadCounterData();
+}
+
+// Obsługa skrótów klawiszowych
+document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+    }
+
+    const selectedCard = document.querySelector('.counter-card.selected');
+
+    switch(e.key.toLowerCase()) {
+        case 'arrowup':
+        case 'w':
+            e.preventDefault();
+            navigateCounters('up');
+            break;
+        case 'arrowdown':
+        case 's':
+            e.preventDefault();
+            navigateCounters('down');
+            break;
+        case 'arrowleft':
+        case 'a':
+            e.preventDefault();
+            navigateCounters('left');
+            break;
+        case 'arrowright':
+        case 'd':
+            e.preventDefault();
+            navigateCounters('right');
+            break;
+        case ' ':
+        case 'enter':
+            e.preventDefault();
+            if (selectedCard && isToday) {
+                const counterId = parseInt(selectedCard.dataset.counterId);
+                const counter = currentCounters.find(c => c.id === counterId);
+                if (counter) {
+                    const increment = parseInt(counter.increment) || 1;
+                    adjustCounterValue(counterId, increment);
+                }
+            }
+            break;
+        case 'backspace':
+        case 'x':
+            e.preventDefault();
+            if (selectedCard && isToday) {
+                const counterId = parseInt(selectedCard.dataset.counterId);
+                const counter = currentCounters.find(c => c.id === counterId);
+                if (counter) {
+                    const increment = parseInt(counter.increment) || 1;
+                    adjustCounterValue(counterId, -increment);
+                }
+            }
+            break;
+        case 'k':
+            e.preventDefault();
+            cycleThroughCategories();
+            break;
+        case 'v':
+            e.preventDefault();
+            toggleView();
+            break;
+    }
+});
+
+function switchCategory() {
+    if (!currentCounters.length) return;
+
+    const categoriesWithCounters = [...new Set(currentCounters.map(c => c.category || 'Bez kategorii'))];
+
+    if (categoriesWithCounters.length <= 1) return;
+
+    const selectedCard = document.querySelector('.counter-card.selected');
+
+    if (!selectedCard) {
+        const firstCounter = document.querySelector('.counter-card');
+        if (firstCounter) selectCounter(firstCounter.dataset.counterId);
+        return;
+    }
+
+    const currentCounterId = parseInt(selectedCard.dataset.counterId);
+    const currentCounter = currentCounters.find(c => c.id === currentCounterId);
+    const currentCategory = currentCounter.category || 'Bez kategorii';
+
+    const currentCategoryIndex = categoriesWithCounters.indexOf(currentCategory);
+    const nextCategoryIndex = (currentCategoryIndex + 1) % categoriesWithCounters.length;
+    const nextCategory = categoriesWithCounters[nextCategoryIndex];
+
+    const nextCategoryCounter = currentCounters.find(c => (c.category_id || 'Bez kategorii') === nextCategory);
+     if (nextCategoryCounter) {
+         const nextCard = document.querySelector(`[data-counter-id="${nextCategoryCounter.id}"]`);
+         if (nextCard) selectCounter(nextCard.dataset.counterId);
+     }
+}
+
+function setupViewSwitching() {
+    const gridBtn = document.getElementById('grid-view-btn');
+    const listBtn = document.getElementById('list-view-btn');
+    const container = document.getElementById('counters-container');
+    const grid = document.getElementById('counters-grid');
+
+    gridBtn.addEventListener('click', () => {
+        changeView('grid');
+    });
+
+    listBtn.addEventListener('click', () => {
+        changeView('list');
+    });
+}
