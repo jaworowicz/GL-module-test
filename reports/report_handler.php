@@ -6,7 +6,6 @@ require_once '../../../includes/db.php';
 auth_require_login();
 header('Content-Type: application/json');
 
-// Połączenie z bazą danych - używaj tego samego co główny moduł
 global $pdo;
 
 $action = $_POST['action'] ?? '';
@@ -51,7 +50,6 @@ function getCustomTemplates() {
         }
     }
 
-    // Dodaj domyślny szablon jeśli brak niestandardowych
     if (empty($templates)) {
         $templates[] = [
             'filename' => 'default.php',
@@ -65,15 +63,12 @@ function getCustomTemplates() {
 function getReportPreview($templateId, $date) {
     global $pdo;
     try {
-        // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
         if (file_exists($customTemplateFile)) {
-            // Niestandardowy szablon
             $templateData = json_decode(file_get_contents($customTemplateFile), true);
             $htmlContent = $templateData['html_content'];
         } else {
-            // Domyślny szablon
             $templatePath = __DIR__ . '/default.php';
             if (!file_exists($templatePath)) {
                 return ['success' => false, 'message' => 'Szablon nie istnieje'];
@@ -81,21 +76,13 @@ function getReportPreview($templateId, $date) {
             $htmlContent = file_get_contents($templatePath);
         }
 
-        // Pobierz WSZYSTKIE dane KPI - nie limituj w podglądzie
         $kpiData = getKpiDataForReport($date);
-        
-        // Debug - sprawdź czy dane zostały pobrane
-        error_log("Debug KPI preview data for date $date: " . print_r($kpiData, true));
-
-        // Przetwórz szablon
         $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
 
-        // Dla niestandardowych szablonów nie usuwaj HTML
         if (file_exists($customTemplateFile)) {
             return ['success' => true, 'preview' => $preview];
         }
 
-        // Dla domyślnego szablonu usuń HTML i zwróć tylko tabelę
         $preview = preg_replace('/<html.*?<body[^>]*>/s', '', $preview);
         $preview = preg_replace('/<\/body>.*?<\/html>/s', '', $preview);
         $preview = preg_replace('/<head>.*?<\/head>/s', '', $preview);
@@ -111,15 +98,12 @@ function getReportPreview($templateId, $date) {
 function generateReport($templateId, $date) {
     global $pdo;
     try {
-        // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
         if (file_exists($customTemplateFile)) {
-            // Niestandardowy szablon
             $templateData = json_decode(file_get_contents($customTemplateFile), true);
             $htmlContent = $templateData['html_content'];
         } else {
-            // Domyślny szablon
             $templatePath = __DIR__ . '/default.php';
             if (!file_exists($templatePath)) {
                 return ['success' => false, 'message' => 'Szablon nie istnieje'];
@@ -127,13 +111,7 @@ function generateReport($templateId, $date) {
             $htmlContent = file_get_contents($templatePath);
         }
 
-        // Pobierz wszystkie dane KPI
         $kpiData = getKpiDataForReport($date);
-        
-        // Debug - sprawdź czy dane zostały pobrane
-        error_log("Debug KPI data for date $date: " . print_r($kpiData, true));
-
-        // Przetwórz szablon
         $reportHtml = processReportTemplate($htmlContent, $kpiData, $date, false);
 
         return ['success' => true, 'html' => $reportHtml];
@@ -143,18 +121,17 @@ function generateReport($templateId, $date) {
     }
 }
 
-function getKpiDataForReport($date, $limit = null) {
+function getKpiDataForReport($date) {
     global $pdo;
     try {
-        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
             error_log("Brak sfid_id w sesji dla raportu KPI");
             return [];
         }
 
-        // Pobierz WSZYSTKIE cele KPI dla konkretnego SFID - UŻYWAJ RZECZYWISTYCH ID Z BAZY
-        $kpiQuery = "SELECT id, name, total_goal, sfid_id FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
+        // Pobierz WSZYSTKIE cele KPI dla lokalizacji - RZECZYWISTE ID
+        $kpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -162,18 +139,17 @@ function getKpiDataForReport($date, $limit = null) {
         $kpiData = [];
 
         foreach ($kpiGoals as $goal) {
-            // Pobierz powiązane liczniki z osobnej tabeli
+            // Pobierz powiązane liczniki
             $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
             $linkedStmt = $pdo->prepare($linkedQuery);
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // POBIERZ WARTOŚCI DLA CAŁEGO ZESPOŁU Z LOKALIZACJI - nie tylko dla jednego użytkownika
             $totalValue = 0;
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
-
-                // Pobierz wszystkich użytkowników z tej samej lokalizacji (sfid_id)
+                
+                // Pobierz wartości dla CAŁEGO ZESPOŁU z lokalizacji
                 $teamQuery = "SELECT DISTINCT lc.id
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
@@ -199,16 +175,16 @@ function getKpiDataForReport($date, $limit = null) {
                 }
             }
 
-            // Oblicz cel dzienny (zaokrąglony w górę)
+            // Oblicz cel dzienny
             $dailyGoal = 0;
             if ($goal['total_goal'] > 0) {
-                // Pobierz liczbę dni roboczych w miesiącu
                 $monthStart = date('Y-m-01', strtotime($date));
                 $monthEnd = date('Y-m-t', strtotime($date));
                 $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
                 $dailyGoal = ceil($goal['total_goal'] / $workingDays);
             }
 
+            // UŻYJ RZECZYWISTEGO ID Z BAZY - nie pozycyjnego
             $kpiData[$goal['id']] = [
                 'value' => $totalValue,
                 'daily_goal' => $dailyGoal,
@@ -220,6 +196,7 @@ function getKpiDataForReport($date, $limit = null) {
         return $kpiData;
 
     } catch (Exception $e) {
+        error_log("Błąd pobierania danych KPI: " . $e->getMessage());
         return [];
     }
 }
@@ -229,7 +206,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // UŻYJ RZECZYWISTYCH ID Z SZABLONU - bez mapowania pozycyjnego  
+    // UŻYJ RZECZYWISTYCH ID Z BAZY DANYCH - nie pozycyjnych
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
@@ -240,7 +217,6 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     // Usuń nieużywane placeholdery
     $template = preg_replace('/\{KPI_[^}]+\}/', '-', $template);
 
-    // W podglądzie dodaj informację
     if ($isPreview) {
         $template = '<div style="background: #16a34a; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
             <strong>PODGLĄD RAPORTU ZESPOŁOWEGO</strong> - dane całej lokalizacji za dzień: ' . date('d.m.Y', strtotime($date)) . '
@@ -257,7 +233,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
 
     while ($start <= $end) {
         $dayOfWeek = $start->format('N');
-        if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+        if ($dayOfWeek < 6) {
             $workingDays++;
         }
         $start->add(new DateInterval('P1D'));
