@@ -172,11 +172,10 @@ function getKpiDataForReport($date, $pdo) {
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
 
-                // Pobierz liczniki zespołowe dla tej lokalizacji
-                $teamQuery = "SELECT lc.id, lc.name, u.name as user_name
+                // Pobierz liczniki zespołowe dla tej lokalizacji (bezpośrednio przez sfid_id)
+                $teamQuery = "SELECT lc.id, lc.title, lc.sfid_id
                              FROM licznik_counters lc 
-                             INNER JOIN users u ON lc.user_id = u.id 
-                             WHERE u.sfid_id = ? 
+                             WHERE lc.sfid_id = ? 
                              AND lc.id IN ($placeholders)
                              AND lc.is_active = 1";
 
