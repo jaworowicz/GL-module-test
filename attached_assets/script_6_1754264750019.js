@@ -1126,28 +1126,25 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
 
     const isHidden = menu.classList.contains('hidden');
 
-    // Pozycjonowanie dla menu w widoku siatki - używaj absolute z resetem inline styles
+    if (isHidden) {
+        // Pokazuj menu
+        menu.classList.remove('hidden');
+
+        // Pozycjonowanie dla menu w widoku siatki - pozostaw jak było
         if (viewType === 'grid') {
-            // Reset wszystkich inline styles
-            menu.style.position = '';
-            menu.style.top = '';
-            menu.style.left = '';
-            menu.style.right = '';
-            menu.style.zIndex = '';
-            // Klasy CSS zarządzają pozycjonowaniem
+            menu.style.position = 'absolute';
+            menu.style.top = '100%';
+            menu.style.right = '0';
+            menu.style.left = 'auto';
+            menu.style.zIndex = '1000';
         } else {
             // W widoku listy - usuń wszystkie inline styles aby menu było widoczne
-            // (licznik może się poszarzyć ale menu będzie działać)
             menu.style.position = '';
             menu.style.top = '';
             menu.style.left = '';
             menu.style.right = '';
             menu.style.zIndex = '';
         }
-
-    if (isHidden) {
-        // Pokazuj menu
-        menu.classList.remove('hidden');
     } else {
         // Ukryj menu
         menu.classList.add('hidden');
