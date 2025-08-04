@@ -178,19 +178,35 @@ function getRealKpiDataForPreview($date, $pdo) {
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // Pobierz wartości dla tego dnia
+            // POBIERZ WARTOŚCI DLA CAŁEGO ZESPOŁU Z LOKALIZACJI - nie tylko dla jednego użytkownika
             $totalValue = 0;
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
-                $valueQuery = "SELECT SUM(value) as total 
-                              FROM licznik_daily_values 
-                              WHERE counter_id IN ($placeholders) 
-                              AND date = ?";
+                
+                // Pobierz wszystkich użytkowników z tej samej lokalizacji (sfid_id)
+                $teamQuery = "SELECT DISTINCT lc.id
+                             FROM licznik_counters lc 
+                             INNER JOIN users u ON lc.user_id = u.id 
+                             WHERE u.sfid_id = ? 
+                             AND lc.id IN ($placeholders)";
+                
+                $teamParams = array_merge([$sfidId], $linkedCounterIds);
+                $teamStmt = $pdo->prepare($teamQuery);
+                $teamStmt->execute($teamParams);
+                $teamCounterIds = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (!empty($teamCounterIds)) {
+                    $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
+                    $valueQuery = "SELECT SUM(value) as total 
+                                  FROM licznik_daily_values 
+                                  WHERE counter_id IN ($teamPlaceholders) 
+                                  AND date = ?";
 
-                $params = array_merge($linkedCounterIds, [$date]);
-                $valueStmt = $pdo->prepare($valueQuery);
-                $valueStmt->execute($params);
-                $totalValue = $valueStmt->fetchColumn() ?: 0;
+                    $params = array_merge($teamCounterIds, [$date]);
+                    $valueStmt = $pdo->prepare($valueQuery);
+                    $valueStmt->execute($params);
+                    $totalValue = $valueStmt->fetchColumn() ?: 0;
+                }
             }
 
             // Oblicz cel dzienny

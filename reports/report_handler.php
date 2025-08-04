@@ -1,3 +1,7 @@
+The code is modified to fetch KPI data for the entire team in a location and update the preview message to reflect this change.
+```
+
+```php
 <?php
 require_once '../../../includes/auth.php';
 require_once '../../../includes/db.php';
@@ -142,8 +146,6 @@ function getKpiDataForReport($date, $pdo, $limit = null) {
 
         // Pobierz WSZYSTKIE cele KPI dla konkretnego SFID - UŻYWAJ RZECZYWISTYCH ID Z BAZY
         $kpiQuery = "SELECT id, name, total_goal, sfid_id FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
-        // Usuń LIMIT - pobierz wszystkie KPI aby znaleźć te o rzeczywistych ID z szablonu
-        
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -157,19 +159,35 @@ function getKpiDataForReport($date, $pdo, $limit = null) {
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // Pobierz wartości dla tego dnia
+            // POBIERZ WARTOŚCI DLA CAŁEGO ZESPOŁU Z LOKALIZACJI - nie tylko dla jednego użytkownika
             $totalValue = 0;
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
-                $valueQuery = "SELECT SUM(value) as total 
-                              FROM licznik_daily_values 
-                              WHERE counter_id IN ($placeholders) 
-                              AND date = ?";
 
-                $params = array_merge($linkedCounterIds, [$date]);
-                $valueStmt = $pdo->prepare($valueQuery);
-                $valueStmt->execute($params);
-                $totalValue = $valueStmt->fetchColumn() ?: 0;
+                // Pobierz wszystkich użytkowników z tej samej lokalizacji (sfid_id)
+                $teamQuery = "SELECT DISTINCT lc.id
+                             FROM licznik_counters lc 
+                             INNER JOIN users u ON lc.user_id = u.id 
+                             WHERE u.sfid_id = ? 
+                             AND lc.id IN ($placeholders)";
+
+                $teamParams = array_merge([$sfidId], $linkedCounterIds);
+                $teamStmt = $pdo->prepare($teamQuery);
+                $teamStmt->execute($teamParams);
+                $teamCounterIds = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                if (!empty($teamCounterIds)) {
+                    $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
+                    $valueQuery = "SELECT SUM(value) as total 
+                                  FROM licznik_daily_values 
+                                  WHERE counter_id IN ($teamPlaceholders) 
+                                  AND date = ?";
+
+                    $params = array_merge($teamCounterIds, [$date]);
+                    $valueStmt = $pdo->prepare($valueQuery);
+                    $valueStmt->execute($params);
+                    $totalValue = $valueStmt->fetchColumn() ?: 0;
+                }
             }
 
             // Oblicz cel dzienny (zaokrąglony w górę)
@@ -216,7 +234,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     // W podglądzie dodaj informację
     if ($isPreview) {
         $template = '<div style="background: #16a34a; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-            <strong>PODGLĄD RAPORTU</strong> - dane z modułu KPI
+            <strong>PODGLĄD RAPORTU ZESPOŁOWEGO</strong> - dane całej lokalizacji za dzień: ' . date('d.m.Y', strtotime($date)) . '
         </div>' . $template;
     }
 
@@ -239,3 +257,4 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
     return $workingDays;
 }
 ?>
+</replit_final_file>
