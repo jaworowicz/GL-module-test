@@ -11,7 +11,7 @@ $action = $_POST['action'] ?? '';
 try {
     switch ($action) {
         case 'get_templates':
-            echo json_encode(getTemplatesList());
+            echo json_encode(getTemplates());
             break;
             
         case 'get_template':
@@ -19,7 +19,7 @@ try {
             break;
             
         case 'save_template':
-            echo json_encode(saveTemplate($_POST));
+            echo json_encode(saveTemplate());
             break;
             
         case 'delete_template':
@@ -27,17 +27,17 @@ try {
             break;
             
         case 'preview_template':
-            echo json_encode(previewTemplate($_POST['html_content'], $_POST['date'], $pdo));
+            echo json_encode(previewTemplate($_POST['html_content'], $_POST['date']));
             break;
             
         default:
             echo json_encode(['success' => false, 'message' => 'Nieznana akcja']);
     }
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Błąd: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Błąd serwera: ' . $e->getMessage()]);
 }
 
-function getTemplatesList() {
+function getTemplates() {
     $templatesDir = __DIR__ . '/templates/';
     if (!is_dir($templatesDir)) {
         mkdir($templatesDir, 0755, true);
@@ -50,10 +50,10 @@ function getTemplatesList() {
         $data = json_decode(file_get_contents($file), true);
         if ($data) {
             $templates[] = [
-                'id' => basename($file, '.json'),
+                'id' => $data['id'],
                 'name' => $data['name'],
                 'description' => $data['description'] ?? '',
-                'created' => $data['created'] ?? ''
+                'created' => $data['created'] ?? date('Y-m-d H:i:s')
             ];
         }
     }
@@ -62,24 +62,42 @@ function getTemplatesList() {
 }
 
 function getTemplate($templateId) {
-    $file = __DIR__ . '/templates/' . $templateId . '.json';
-    if (!file_exists($file)) {
+    $templateFile = __DIR__ . '/templates/' . $templateId . '.json';
+    
+    if (!file_exists($templateFile)) {
         return ['success' => false, 'message' => 'Szablon nie istnieje'];
     }
     
-    $data = json_decode(file_get_contents($file), true);
+    $data = json_decode(file_get_contents($templateFile), true);
+    if (!$data) {
+        return ['success' => false, 'message' => 'Błąd odczytu szablonu'];
+    }
+    
     return ['success' => true, 'template' => $data];
 }
 
-function saveTemplate($data) {
-    $templateId = $data['template_id'] ?? uniqid();
+function saveTemplate() {
+    $templateId = $_POST['template_id'] ?? '';
+    $name = trim($_POST['name'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $htmlContent = $_POST['html_content'] ?? '';
+    
+    if (empty($name)) {
+        return ['success' => false, 'message' => 'Nazwa szablonu jest wymagana'];
+    }
+    
+    // Jeśli to nowy szablon, wygeneruj ID
+    if (empty($templateId)) {
+        $templateId = 'template_' . time() . '_' . rand(1000, 9999);
+    }
+    
     $templateData = [
         'id' => $templateId,
-        'name' => $data['name'],
-        'description' => $data['description'] ?? '',
-        'html_content' => $data['html_content'],
-        'created' => $data['created'] ?? date('Y-m-d H:i:s'),
-        'modified' => date('Y-m-d H:i:s')
+        'name' => $name,
+        'description' => $description,
+        'html_content' => $htmlContent,
+        'created' => date('Y-m-d H:i:s'),
+        'updated' => date('Y-m-d H:i:s')
     ];
     
     $templatesDir = __DIR__ . '/templates/';
@@ -87,63 +105,52 @@ function saveTemplate($data) {
         mkdir($templatesDir, 0755, true);
     }
     
-    $file = $templatesDir . $templateId . '.json';
-    if (file_put_contents($file, json_encode($templateData, JSON_PRETTY_PRINT))) {
-        return ['success' => true, 'template_id' => $templateId];
-    }
+    $templateFile = $templatesDir . $templateId . '.json';
     
-    return ['success' => false, 'message' => 'Błąd zapisu szablonu'];
+    if (file_put_contents($templateFile, json_encode($templateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
+        return ['success' => true, 'message' => 'Szablon zapisany', 'template_id' => $templateId];
+    } else {
+        return ['success' => false, 'message' => 'Błąd zapisu pliku'];
+    }
 }
 
 function deleteTemplate($templateId) {
-    $file = __DIR__ . '/templates/' . $templateId . '.json';
-    if (file_exists($file) && unlink($file)) {
-        return ['success' => true];
+    if (empty($templateId)) {
+        return ['success' => false, 'message' => 'ID szablonu jest wymagane'];
     }
-    return ['success' => false, 'message' => 'Błąd usuwania szablonu'];
+    
+    $templateFile = __DIR__ . '/templates/' . $templateId . '.json';
+    
+    if (!file_exists($templateFile)) {
+        return ['success' => false, 'message' => 'Szablon nie istnieje'];
+    }
+    
+    if (unlink($templateFile)) {
+        return ['success' => true, 'message' => 'Szablon usunięty'];
+    } else {
+        return ['success' => false, 'message' => 'Błąd usuwania pliku'];
+    }
 }
 
-function previewTemplate($htmlContent, $date, $pdo) {
-    // Pobierz dane KPI dla podglądu
-    $kpiData = getKpiDataForPreview($date, $pdo);
+function previewTemplate($htmlContent, $date) {
+    if (empty($htmlContent)) {
+        return ['success' => true, 'preview' => '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>'];
+    }
+    
+    // Podstawowe dane do podglądu
+    $sampleKpiData = [
+        1 => ['value' => 25, 'daily_goal' => 30, 'monthly_goal' => 600, 'name' => 'Sprzedaż (przykład)'],
+        2 => ['value' => 45, 'daily_goal' => 40, 'monthly_goal' => 800, 'name' => 'Kontakty (przykład)'],
+        3 => ['value' => 12, 'daily_goal' => 15, 'monthly_goal' => 300, 'name' => 'Oferty (przykład)']
+    ];
     
     // Przetwórz szablon
-    $processedHtml = processTemplateContent($htmlContent, $kpiData, $date);
+    $preview = processTemplatePreview($htmlContent, $sampleKpiData, $date);
     
-    return ['success' => true, 'preview' => $processedHtml];
+    return ['success' => true, 'preview' => $preview];
 }
 
-function getKpiDataForPreview($date, $pdo) {
-    try {
-        $sfidId = $_SESSION['sfid_id'] ?? 1;
-        
-        // Pobierz cele KPI
-        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC LIMIT 5";
-        $kpiStmt = $pdo->prepare($kpiQuery);
-        $kpiStmt->execute([$sfidId]);
-        $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $kpiData = [];
-        foreach ($kpiGoals as $goal) {
-            // Pobierz wartości dla tego dnia
-            $totalValue = rand(0, 50); // Przykładowe dane
-            $dailyGoal = ceil($goal['total_goal'] / 22); // Szacunkowy cel dzienny
-            
-            $kpiData[$goal['id']] = [
-                'value' => $totalValue,
-                'daily_goal' => $dailyGoal,
-                'monthly_goal' => $goal['total_goal'],
-                'name' => $goal['name']
-            ];
-        }
-        
-        return $kpiData;
-    } catch (Exception $e) {
-        return [];
-    }
-}
-
-function processTemplateContent($template, $kpiData, $date) {
+function processTemplatePreview($template, $kpiData, $date) {
     // Zastąp datę raportu
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
@@ -157,7 +164,14 @@ function processTemplateContent($template, $kpiData, $date) {
     }
     
     // Usuń nieużywane placeholdery
-    $template = preg_replace('/\{KPI_[^}]+\}/', '-', $template);
+    $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">BRAK DANYCH</span>', $template);
+    
+    // Dodaj informację o podglądzie
+    if (strpos($template, '<body') !== false) {
+        $template = str_replace('<body', '<body style="border: 3px solid #3b82f6; margin: 10px; padding: 10px; position: relative;"', $template);
+        $template = str_replace('<body', '<body><div style="position: absolute; top: 0; left: 0; right: 0; background: #3b82f6; color: white; padding: 10px; text-align: center; font-weight: bold;">PODGLĄD SZABLONU - DANE PRZYKŁADOWE</div><div style="margin-top: 50px;"', $template);
+        $template = str_replace('</body>', '</div></body>', $template);
+    }
     
     return $template;
 }
