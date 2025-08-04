@@ -253,7 +253,7 @@ function createCounterCard(counter, index, viewType = 'grid') {
                     </button>
                 </div>
                 <div class="text-right relative">
-                    <button onclick="toggleCounterMenu(${counter.id}, 'list')" class="text-gray-400 hover:text-white" title="Menu">
+                    <button onclick="toggleCounterMenu(${counter.id}, 'list', event)" class="text-gray-400 hover:text-white" title="Menu">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                     <div id="counter-menu-${counter.id}-list" class="counter-menu hidden">
@@ -279,7 +279,7 @@ function createCounterCard(counter, index, viewType = 'grid') {
                         </div>
                     </div>
                     <div class="relative">
-                        <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
+                        <button onclick="toggleCounterMenu(${counter.id}, 'grid', event)" class="text-gray-400 hover:text-white" title="Menu">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <div id="counter-menu-${counter.id}" class="counter-menu hidden">
@@ -1090,7 +1090,13 @@ function openPublicView() {
 }
 
 // Przełącz menu licznika
-function toggleCounterMenu(counterId, viewType = 'grid') {
+function toggleCounterMenu(counterId, viewType = 'grid', event) {
+    // Zapobiegaj propagacji eventu
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
     // Zamknij wszystkie inne menu
     document.querySelectorAll('[id^="counter-menu-"]').forEach(menu => {
         if (menu.id !== `counter-menu-${counterId}` && menu.id !== `counter-menu-${counterId}-list`) {
@@ -1102,36 +1108,41 @@ function toggleCounterMenu(counterId, viewType = 'grid') {
     const menuId = viewType === 'list' ? `counter-menu-${counterId}-list` : `counter-menu-${counterId}`;
     const menu = document.getElementById(menuId);
     if (menu) {
+        const isHidden = menu.classList.contains('hidden');
         menu.classList.toggle('hidden');
         
         // Ustaw pozycję względem przycisku dla wszystkich widoków
-        if (!menu.classList.contains('hidden')) {
-            const button = event.target.closest('button');
+        if (isHidden) { // Jeśli menu było ukryte i teraz je pokazujemy
+            const button = event ? event.target.closest('button') : 
+                          document.querySelector(`[onclick*="toggleCounterMenu(${counterId}"]`);
             if (button) {
                 const rect = button.getBoundingClientRect();
                 menu.style.position = 'fixed';
-                
-                // Sprawdź czy menu zmieści się z prawej strony
-                const menuWidth = 180; // przewidywana szerokość menu
-                if (rect.right + menuWidth > window.innerWidth) {
-                    // Umieść z lewej strony przycisku
-                    menu.style.left = (rect.left - menuWidth) + 'px';
-                } else {
-                    // Umieść z prawej strony przycisku
-                    menu.style.left = rect.right + 'px';
-                }
-                
-                // Sprawdź czy menu zmieści się poniżej
-                const menuHeight = 200; // przewidywana wysokość menu
-                if (rect.bottom + menuHeight > window.innerHeight) {
-                    // Umieść powyżej przycisku
-                    menu.style.top = (rect.top - menuHeight) + 'px';
-                } else {
-                    // Umieść poniżej przycisku
-                    menu.style.top = rect.bottom + 'px';
-                }
-                
                 menu.style.zIndex = '1000';
+                
+                // Prostsze pozycjonowanie - zawsze z prawej strony, z małym offsetem
+                menu.style.left = (rect.right + 5) + 'px';
+                menu.style.top = rect.top + 'px';
+                
+                // Sprawdź czy menu wychodzi poza ekran i dostosuj
+                setTimeout(() => {
+                    const menuRect = menu.getBoundingClientRect();
+                    
+                    // Jeśli menu wychodzi poza prawą krawędź
+                    if (menuRect.right > window.innerWidth) {
+                        menu.style.left = (rect.left - menuRect.width - 5) + 'px';
+                    }
+                    
+                    // Jeśli menu wychodzi poza dolną krawędź
+                    if (menuRect.bottom > window.innerHeight) {
+                        menu.style.top = (window.innerHeight - menuRect.height - 10) + 'px';
+                    }
+                    
+                    // Jeśli menu wychodzi poza górną krawędź
+                    if (menuRect.top < 0) {
+                        menu.style.top = '10px';
+                    }
+                }, 10);
             }
         }
     }
