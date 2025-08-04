@@ -1104,14 +1104,33 @@ function toggleCounterMenu(counterId, viewType = 'grid') {
     if (menu) {
         menu.classList.toggle('hidden');
         
-        // Dla widoku listy, ustaw pozycję względem przycisku
-        if (viewType === 'list' && !menu.classList.contains('hidden')) {
+        // Ustaw pozycję względem przycisku dla wszystkich widoków
+        if (!menu.classList.contains('hidden')) {
             const button = event.target.closest('button');
             if (button) {
                 const rect = button.getBoundingClientRect();
                 menu.style.position = 'fixed';
-                menu.style.left = (rect.left - menu.offsetWidth + button.offsetWidth) + 'px';
-                menu.style.top = (rect.top - menu.offsetHeight - 5) + 'px';
+                
+                // Sprawdź czy menu zmieści się z prawej strony
+                const menuWidth = 180; // przewidywana szerokość menu
+                if (rect.right + menuWidth > window.innerWidth) {
+                    // Umieść z lewej strony przycisku
+                    menu.style.left = (rect.left - menuWidth) + 'px';
+                } else {
+                    // Umieść z prawej strony przycisku
+                    menu.style.left = rect.right + 'px';
+                }
+                
+                // Sprawdź czy menu zmieści się poniżej
+                const menuHeight = 200; // przewidywana wysokość menu
+                if (rect.bottom + menuHeight > window.innerHeight) {
+                    // Umieść powyżej przycisku
+                    menu.style.top = (rect.top - menuHeight) + 'px';
+                } else {
+                    // Umieść poniżej przycisku
+                    menu.style.top = rect.bottom + 'px';
+                }
+                
                 menu.style.zIndex = '1000';
             }
         }
