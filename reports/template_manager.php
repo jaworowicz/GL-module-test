@@ -251,8 +251,11 @@ function processTemplatePreview($template, $kpiData, $date) {
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
-    // Sprawdź czy to są prawdziwe dane czy przykładowe
-    $isRealData = !empty($kpiData) && !isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false);
+    // Jeśli brak danych KPI, wyświetl błąd dla wszystkich placeholderów
+    if (empty($kpiData)) {
+        $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Błąd danych</span>', $template);
+        return $template;
+    }
 
     // Zastąp placeholdery KPI - używaj rzeczywistych ID z bazy danych
     foreach ($kpiData as $kpiId => $data) {
@@ -262,8 +265,11 @@ function processTemplatePreview($template, $kpiData, $date) {
         $template = str_replace('{KPI_NAME=' . $kpiId . '}', $data['name'], $template);
     }
 
-    // Usuń nieużywane placeholdery
-    $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">BRAK DANYCH</span>', $template);
+    // Usuń nieużywane placeholdery - pokaż "Błąd danych" 
+    $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">Błąd danych</span>', $template);
+
+    // Sprawdź czy to są prawdziwe dane czy przykładowe
+    $isRealData = !empty($kpiData) && (!isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false));
 
     // Dodaj informację o podglądzie
     $headerText = $isRealData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - DANE PRZYKŁADOWE';
