@@ -197,6 +197,11 @@ function renderCounters() {
     if (filteredCounters.length > 0 && !selectedCounterId) {
         selectCounter(filteredCounters[0].id);
     }
+
+    // Opóźnij ładowanie celów dziennych
+    setTimeout(() => {
+        updateDailyGoalsDisplay();
+    }, 100);
 }
 
 // Tworzenie karty licznika
@@ -208,25 +213,6 @@ function createCounterCard(counter, index, viewType = 'grid') {
     card.dataset.counterId = counter.id;
     card.dataset.viewType = viewType;
     card.style.borderLeftColor = counter.color || '#374151';
-
-    // Znajdź cel dzienny dla tego licznika
-    const dailyGoal = getDailyGoalForCounter(counter.id);
-    let dailyGoalText = '';
-
-    if (dailyGoal && typeof dailyGoal === 'object') {
-        if (dailyGoal.current >= dailyGoal.total) {
-            dailyGoalText = `Cel dzienny: ✅ ${dailyGoal.current}/${dailyGoal.total}`;
-        } else {
-            dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
-        }
-
-        // Dodaj informację o celu zespołowym jeśli istnieje
-        if (dailyGoal.teamDaily > 0) {
-            dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
-        }
-    } else if (dailyGoal > 0) {
-        dailyGoalText = `Cel dzienny: ${dailyGoal}`;
-    }
 
     // Obsługa liczników walutowych
     const currencySymbol = counter.type === 'currency' && counter.symbol ?
@@ -240,13 +226,18 @@ function createCounterCard(counter, index, viewType = 'grid') {
             <div class="flex-1 grid grid-cols-6 gap-4 items-center">
                 <div class="col-span-2">
                     <h3 class="counter-title text-lg">${escapeHtml(counter.title)}</h3>
+                    <div class="daily-goals-container-list text-xs text-gray-400" id="daily-goals-${counter.id}-list">
+                        <!-- Cele dzienne będą załadowane później -->
+                    </div>
                     <p class="counter-category text-sm">${escapeHtml(counter.category || 'Bez kategorii')}</p>
                 </div>
                 <div class="text-center">
                     <span class="counter-value text-xl font-bold" id="counter-value-${counter.id}-list">${counter.value}${currencySymbol}</span>
                 </div>
                 <div class="text-center text-sm text-gray-400">
-                    ${dailyGoalText || 'Brak celu'}
+                    <div class="daily-goals-summary-list" id="daily-goals-summary-${counter.id}-list">
+                        <!-- Podsumowanie celów -->
+                    </div>
                 </div>
                 <div class="flex gap-2 ${controlsOpacity}">
                     <button class="counter-btn minus w-8 h-8 flex items-center justify-center" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz" ${controlsDisabled ? 'disabled' : ''}>
@@ -256,11 +247,11 @@ function createCounterCard(counter, index, viewType = 'grid') {
                         <i class="fas fa-plus text-xs"></i>
                     </button>
                 </div>
-                <div class="text-right">
-                    <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
+                <div class="text-right relative">
+                    <button onclick="toggleCounterMenu(${counter.id}, 'list')" class="text-gray-400 hover:text-white" title="Menu">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
-                    <div id="counter-menu-${counter.id}-list" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                    <div id="counter-menu-${counter.id}-list" class="counter-menu hidden">
                         <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
                         <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
                         <div class="border-t border-slate-600 my-1"></div>
@@ -278,13 +269,16 @@ function createCounterCard(counter, index, viewType = 'grid') {
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex-1">
                         <h3 class="counter-title">${escapeHtml(counter.title)}</h3>
+                        <div class="daily-goals-container text-xs text-gray-400 mt-1" id="daily-goals-${counter.id}">
+                            <!-- Cele dzienne będą załadowane później -->
+                        </div>
                         <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
                     </div>
                     <div class="relative">
                         <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <div id="counter-menu-${counter.id}" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                        <div id="counter-menu-${counter.id}" class="counter-menu hidden">
                             <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
                             <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
                             <div class="border-t border-slate-600 my-1"></div>
@@ -295,7 +289,6 @@ function createCounterCard(counter, index, viewType = 'grid') {
                         </div>
                     </div>
                 </div>
-                ${dailyGoalText ? `<div class="daily-goal">${dailyGoalText}</div>` : ''}
             </div>
 
             <div class="counter-value" id="counter-value-${counter.id}">${counter.value}${currencySymbol}</div>
@@ -423,7 +416,7 @@ async function adjustCounterValue(counterId, direction) {
 
     const increment = counter.increment || 1;
     const change = direction * increment;
-    const newValue = Math.max(0, parseInt(counter.value) + change);
+    const newValue = parseInt(counter.value) + change; // Usuń ograniczenie Math.max(0, ...)
 
     // Natychmiastowa aktualizacja UI w obu widokach
     const valueElement = document.getElementById(`counter-value-${counterId}`);
@@ -924,12 +917,19 @@ function populateCategoryDropdown() {
         </div>
     `;
 
+    // Pokaż tylko kategorie które mają aktywne liczniki
     window.appData.categories.forEach(category => {
-        const item = document.createElement('div');
-        item.className = 'category-menu-item';
-        item.onclick = () => selectCategory(category.id, category.name);
-        item.textContent = category.name;
-        menu.appendChild(item);
+        const hasActiveCounters = currentCounters.some(counter => 
+            counter.category_id == category.id
+        );
+        
+        if (hasActiveCounters) {
+            const item = document.createElement('div');
+            item.className = 'category-menu-item';
+            item.onclick = () => selectCategory(category.id, category.name);
+            item.textContent = category.name;
+            menu.appendChild(item);
+        }
     });
 
     if (window.appData.isAdmin) {
@@ -1048,13 +1048,27 @@ function toggleView() {
 
 // Przełącz kategorie w pętli
 function cycleThroughCategories() {
-    const categories = ['all', ...window.appData.categories.map(c => c.id.toString())];
-    const categoryNames = ['Wszystkie Kategorie', ...window.appData.categories.map(c => c.name)];
+    // Filtruj kategorie tylko do tych które mają aktywne liczniki
+    const categoriesWithCounters = ['all'];
+    const categoryNamesWithCounters = ['Wszystkie Kategorie'];
 
-    const currentIndex = categories.indexOf(currentCategory.toString());
-    const nextIndex = (currentIndex + 1) % categories.length;
+    // Sprawdź które kategorie mają aktywne liczniki
+    window.appData.categories.forEach(category => {
+        const hasActiveCounters = currentCounters.some(counter => 
+            counter.category_id == category.id
+        );
+        if (hasActiveCounters) {
+            categoriesWithCounters.push(category.id.toString());
+            categoryNamesWithCounters.push(category.name);
+        }
+    });
 
-    selectCategory(categories[nextIndex], categoryNames[nextIndex]);
+    if (categoriesWithCounters.length <= 1) return; // Brak kategorii do przełączania
+
+    const currentIndex = categoriesWithCounters.indexOf(currentCategory.toString());
+    const nextIndex = (currentIndex + 1) % categoriesWithCounters.length;
+
+    selectCategory(categoriesWithCounters[nextIndex], categoryNamesWithCounters[nextIndex]);
 }
 
 // Escape HTML
@@ -1072,17 +1086,18 @@ function openPublicView() {
 }
 
 // Przełącz menu licznika
-function toggleCounterMenu(counterId) {
+function toggleCounterMenu(counterId, viewType = 'grid') {
     // Zamknij wszystkie inne menu
     document.querySelectorAll('[id^="counter-menu-"]').forEach(menu => {
-        if (menu.id !== `counter-menu-${counterId}`) {
-            menu.classList.add('hidden');
-        }
+        menu.classList.add('hidden');
     });
 
     // Przełącz obecne menu
-    const menu = document.getElementById(`counter-menu-${counterId}`);
-    menu.classList.toggle('hidden');
+    const menuId = viewType === 'list' ? `counter-menu-${counterId}-list` : `counter-menu-${counterId}`;
+    const menu = document.getElementById(menuId);
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
 }
 
 // Otwórz modal dodawania ilości
@@ -1183,25 +1198,50 @@ function updateDailyGoalsDisplay() {
         if (!counter) return;
 
         const dailyGoal = getDailyGoalForCounter(counter.id);
-        const goalElement = card.querySelector('.daily-goal');
+        const viewType = card.dataset.viewType;
 
-        if (goalElement) {
-            let dailyGoalText = '';
-            if (dailyGoal && typeof dailyGoal === 'object') {
-                if (dailyGoal.current >= dailyGoal.total) {
-                    dailyGoalText = `Cel dzienny: ✅ ${dailyGoal.current}/${dailyGoal.total}`;
+        if (viewType === 'list') {
+            const goalContainer = document.getElementById(`daily-goals-${counterId}-list`);
+            const goalSummary = document.getElementById(`daily-goals-summary-${counterId}-list`);
+            
+            if (goalContainer && goalSummary) {
+                if (dailyGoal && typeof dailyGoal === 'object') {
+                    const personalGoalText = dailyGoal.current >= dailyGoal.total ? 
+                        `✅ Osobisty: ${dailyGoal.current}/${dailyGoal.total}` : 
+                        `Osobisty: ${dailyGoal.current}/${dailyGoal.total}`;
+                    
+                    goalContainer.innerHTML = personalGoalText;
+                    
+                    if (dailyGoal.teamDaily > 0) {
+                        goalSummary.innerHTML = `Zespół: ${dailyGoal.teamDaily}`;
+                    } else {
+                        goalSummary.innerHTML = '';
+                    }
                 } else {
-                    dailyGoalText = `Cel dzienny: ${dailyGoal.current}/${dailyGoal.total} (pozostało: ${dailyGoal.remaining})`;
+                    goalContainer.innerHTML = '';
+                    goalSummary.innerHTML = '';
                 }
-
-                // Dodaj informację o celu zespołowym
-                if (dailyGoal.teamDaily > 0) {
-                    dailyGoalText += ` | Zespół: ${dailyGoal.teamDaily}`;
-                }
-            } else if (dailyGoal > 0) {
-                dailyGoalText = `Cel dzienny: ${dailyGoal}`;
             }
-            goalElement.textContent = dailyGoalText;
+        } else {
+            const goalContainer = document.getElementById(`daily-goals-${counterId}`);
+            
+            if (goalContainer) {
+                if (dailyGoal && typeof dailyGoal === 'object') {
+                    const personalGoalText = dailyGoal.current >= dailyGoal.total ? 
+                        `✅ Osobisty: ${dailyGoal.current}/${dailyGoal.total}` : 
+                        `Osobisty: ${dailyGoal.current}/${dailyGoal.total}`;
+                    
+                    let goalHtml = `<div>${personalGoalText}</div>`;
+                    
+                    if (dailyGoal.teamDaily > 0) {
+                        goalHtml += `<div>Zespół: ${dailyGoal.teamDaily}</div>`;
+                    }
+                    
+                    goalContainer.innerHTML = goalHtml;
+                } else {
+                    goalContainer.innerHTML = '';
+                }
+            }
         }
     });
 }
@@ -1217,7 +1257,7 @@ document.addEventListener('click', function(e) {
 
     // Zamknij wszystkie menu liczników jeśli kliknięto poza nimi
     document.querySelectorAll('[id^="counter-menu-"]').forEach(counterMenu => {
-        if (!counterMenu.contains(e.target) && !e.target.closest('.counter-card')) {
+        if (!counterMenu.contains(e.target) && !e.target.closest('button[onclick*="toggleCounterMenu"]')) {
             counterMenu.classList.add('hidden');
         }
     });
