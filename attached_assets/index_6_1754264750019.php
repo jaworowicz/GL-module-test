@@ -343,9 +343,15 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
 
     <!-- Main container for the counters -->
     <main>
-        <div id="counters-container" class="counters-container grid-view">
+        <div id="counters-container" class="grid-view">
+            <!-- Grid View -->
             <div id="counters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Counters will be dynamically generated here by JS -->
+                <!-- Counters will be rendered here via JavaScript -->
+            </div>
+
+            <!-- List View (hidden by default) -->
+            <div id="counters-list" class="hidden space-y-2">
+                <!-- List view will be rendered here via JavaScript -->
             </div>
         </div>
 

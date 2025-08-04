@@ -743,6 +743,33 @@ input[type="color"]::-webkit-color-swatch-wrapper {
     text-align: center;
     font-weight: 500;
     padding: 0.25rem;
+}
+
+/* Style dla widoku listy */
+.counter-card-list {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 0.5rem;
+    min-height: 4rem;
+}
+
+.counter-card-list:hover {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.counter-card-list.selected {
+    border-color: rgb(34, 197, 94);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+    background: rgba(30, 41, 59, 0.95);
+}
+
+.list-view .counter-card:not(.counter-card-list) {
+    display: none;
+}
+
+.grid-view .counter-card-list {
+    display: none;
+}
     background: rgba(55, 65, 81, 0.3);
     border-radius: 0.25rem;
 }

@@ -166,8 +166,9 @@ async function loadCounterData() {
 
 // Renderowanie liczników
 function renderCounters() {
-    const container = document.getElementById('counters-grid');
-    if (!container) return;
+    const gridContainer = document.getElementById('counters-grid');
+    const listContainer = document.getElementById('counters-list');
+    if (!gridContainer || !listContainer) return;
 
     // Filtruj liczniki według kategorii
     let filteredCounters = currentCounters;
@@ -177,11 +178,19 @@ function renderCounters() {
         );
     }
 
-    container.innerHTML = '';
+    // Wyczyść oba kontenery
+    gridContainer.innerHTML = '';
+    listContainer.innerHTML = '';
 
+    // Renderuj w obu widokach
     filteredCounters.forEach((counter, index) => {
-        const counterCard = createCounterCard(counter, index);
-        container.appendChild(counterCard);
+        // Siatka - używaj istniejącej funkcji
+        const gridCard = createCounterCard(counter, index, 'grid');
+        gridContainer.appendChild(gridCard);
+
+        // Lista - stwórz wersję listową
+        const listCard = createCounterCard(counter, index, 'list');
+        listContainer.appendChild(listCard);
     });
 
     // Zaznacz pierwszy licznik jeśli żaden nie jest zaznaczony
@@ -191,10 +200,13 @@ function renderCounters() {
 }
 
 // Tworzenie karty licznika
-function createCounterCard(counter, index) {
+function createCounterCard(counter, index, viewType = 'grid') {
     const card = document.createElement('div');
-    card.className = 'counter-card cursor-pointer';
+    const baseClasses = 'counter-card cursor-pointer';
+    const listClasses = viewType === 'list' ? ' counter-card-list flex items-center p-4' : '';
+    card.className = baseClasses + listClasses;
     card.dataset.counterId = counter.id;
+    card.dataset.viewType = viewType;
     card.style.borderLeftColor = counter.color || '#374151';
 
     // Znajdź cel dzienny dla tego licznika
@@ -223,18 +235,32 @@ function createCounterCard(counter, index) {
     const controlsDisabled = !isToday;
     const controlsOpacity = controlsDisabled ? 'opacity-50 pointer-events-none' : '';
 
-    card.innerHTML = `
-        <div class="counter-header">
-            <div class="flex justify-between items-start mb-2">
-                <div class="flex-1">
-                    <h3 class="counter-title">${escapeHtml(counter.title)}</h3>
-                    <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
+    if (viewType === 'list') {
+        card.innerHTML = `
+            <div class="flex-1 grid grid-cols-6 gap-4 items-center">
+                <div class="col-span-2">
+                    <h3 class="counter-title text-lg">${escapeHtml(counter.title)}</h3>
+                    <p class="counter-category text-sm">${escapeHtml(counter.category || 'Bez kategorii')}</p>
                 </div>
-                <div class="relative">
+                <div class="text-center">
+                    <span class="counter-value text-xl font-bold" id="counter-value-${counter.id}-list">${counter.value}${currencySymbol}</span>
+                </div>
+                <div class="text-center text-sm text-gray-400">
+                    ${dailyGoalText || 'Brak celu'}
+                </div>
+                <div class="flex gap-2 ${controlsOpacity}">
+                    <button class="counter-btn minus w-8 h-8 flex items-center justify-center" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz" ${controlsDisabled ? 'disabled' : ''}>
+                        <i class="fas fa-minus text-xs"></i>
+                    </button>
+                    <button class="counter-btn plus w-8 h-8 flex items-center justify-center" onclick="adjustCounterValue(${counter.id}, 1)" title="Zwiększ" ${controlsDisabled ? 'disabled' : ''}>
+                        <i class="fas fa-plus text-xs"></i>
+                    </button>
+                </div>
+                <div class="text-right">
                     <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
-                    <div id="counter-menu-${counter.id}" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                    <div id="counter-menu-${counter.id}-list" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
                         <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
                         <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
                         <div class="border-t border-slate-600 my-1"></div>
@@ -245,20 +271,45 @@ function createCounterCard(counter, index) {
                     </div>
                 </div>
             </div>
-            ${dailyGoalText ? `<div class="daily-goal">${dailyGoalText}</div>` : ''}
-        </div>
+        `;
+    } else {
+        card.innerHTML = `
+            <div class="counter-header">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                        <h3 class="counter-title">${escapeHtml(counter.title)}</h3>
+                        <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
+                    </div>
+                    <div class="relative">
+                        <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div id="counter-menu-${counter.id}" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                            <button onclick="openAddAmountModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Dodaj ilość</button>
+                            <button onclick="openSetValueModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustaw licznik na</button>
+                            <div class="border-t border-slate-600 my-1"></div>
+                            <button onclick="openEditCounterModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Ustawienia (U)</button>
+                            ${window.appData.isAdmin ? `
+                            <button onclick="openDeleteModal(${counter.id})" class="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700">Usuń (D)</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${dailyGoalText ? `<div class="daily-goal">${dailyGoalText}</div>` : ''}
+            </div>
 
-        <div class="counter-value" id="counter-value-${counter.id}">${counter.value}${currencySymbol}</div>
+            <div class="counter-value" id="counter-value-${counter.id}">${counter.value}${currencySymbol}</div>
 
-        <div class="counter-controls ${controlsOpacity}">
-            <button class="counter-btn minus" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz (←/-)"  ${controlsDisabled ? 'disabled' : ''}>
-                <i class="fas fa-minus"></i>
-            </button>
-            <button class="counter-btn plus" onclick="adjustCounterValue(${counter.id}, 1)" title="Zwiększ (→/+)"  ${controlsDisabled ? 'disabled' : ''}>
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
-    `;
+            <div class="counter-controls ${controlsOpacity}">
+                <button class="counter-btn minus" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz (←/-)"  ${controlsDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="counter-btn plus" onclick="adjustCounterValue(${counter.id}, 1)" title="Zwiększ (→/+)"  ${controlsDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        `;
+    }
 
     // Event listener dla zaznaczania
     card.addEventListener('click', function(e) {
@@ -275,44 +326,66 @@ function getDailyGoalForCounter(counterId) {
     const counter = currentCounters.find(c => c.id == counterId);
     if (!counter) return 0;
 
-    for (const kpiGoal of currentKpiGoals) {
+    // Znajdź wszystkie KPI cele które zawierają ten licznik
+    const matchingKpiGoals = currentKpiGoals.filter(kpiGoal => {
         const linkedIds = kpiGoal.linked_counter_ids || [];
-        if (linkedIds.includes(counterId.toString()) || linkedIds.includes(counterId)) {
-            // Używamy dynamicznego celu dziennego z serwera (uwzględnia zespołową realizację)
-            const dynamicDailyGoal = kpiGoal.daily_goal || 0;
+        return linkedIds.includes(counterId.toString()) || linkedIds.includes(counterId);
+    });
 
-            // Oblicz realizację użytkownika dla tego licznika
-            const currentUserValue = parseInt(counter.value) || 0;
+    if (matchingKpiGoals.length === 0) return 0;
 
-            // Cel dla użytkownika = dynamiczny cel dzienny / liczba aktywnych użytkowników
-            const activeUsersCount = window.appData.users ? window.appData.users.length : 1;
-            const userDailyGoal = Math.ceil(dynamicDailyGoal / activeUsersCount);
-
-            const remaining = Math.max(0, userDailyGoal - currentUserValue);
-
-            return { 
-                total: userDailyGoal, 
-                remaining: remaining, 
-                current: currentUserValue,
-                teamDaily: dynamicDailyGoal // cel całego zespołu
-            };
-        }
+    // Jeśli jest więcej niż jeden cel, wybierz ten z najmniejszą liczbą powiązanych liczników
+    // (priorytet dla celów pojedynczych nad zespołowymi)
+    let selectedKpiGoal = matchingKpiGoals[0];
+    
+    if (matchingKpiGoals.length > 1) {
+        selectedKpiGoal = matchingKpiGoals.reduce((prev, current) => {
+            const prevLinkedCount = (prev.linked_counter_ids || []).length;
+            const currentLinkedCount = (current.linked_counter_ids || []).length;
+            return currentLinkedCount < prevLinkedCount ? current : prev;
+        });
     }
-    return 0;
+
+    // Używamy dynamicznego celu dziennego z serwera (uwzględnia zespołową realizację)
+    const dynamicDailyGoal = selectedKpiGoal.daily_goal || 0;
+
+    // Oblicz realizację użytkownika dla tego licznika
+    const currentUserValue = parseInt(counter.value) || 0;
+
+    // Cel dla użytkownika = dynamiczny cel dzienny / liczba aktywnych użytkowników
+    const activeUsersCount = window.appData.users ? window.appData.users.length : 1;
+    const userDailyGoal = Math.ceil(dynamicDailyGoal / activeUsersCount);
+
+    const remaining = Math.max(0, userDailyGoal - currentUserValue);
+
+    return { 
+        total: userDailyGoal, 
+        remaining: remaining, 
+        current: currentUserValue,
+        teamDaily: dynamicDailyGoal, // cel całego zespołu
+        kpiName: selectedKpiGoal.name // nazwa wybranego KPI dla debugowania
+    };
 }
 
 // Zaznaczanie licznika
 function selectCounter(counterId) {
-    // Usuń poprzednie zaznaczenie
+    // Usuń poprzednie zaznaczenie z obu widoków
     document.querySelectorAll('.counter-card').forEach(card => {
         card.classList.remove('selected');
     });
 
-    // Zaznacz nowy
-    const card = document.querySelector(`[data-counter-id="${counterId}"]`);
-    if (card) {
+    // Zaznacz nowy w obu widokach
+    document.querySelectorAll(`[data-counter-id="${counterId}"]`).forEach(card => {
         card.classList.add('selected');
-        selectedCounterId = counterId;
+    });
+
+    selectedCounterId = counterId;
+}
+
+// Aktualizuj zaznaczenie w aktualnym widoku
+function updateCounterSelection() {
+    if (selectedCounterId) {
+        selectCounter(selectedCounterId);
     }
 }
 
@@ -352,10 +425,18 @@ async function adjustCounterValue(counterId, direction) {
     const change = direction * increment;
     const newValue = Math.max(0, parseInt(counter.value) + change);
 
-    // Natychmiastowa aktualizacja UI
+    // Natychmiastowa aktualizacja UI w obu widokach
     const valueElement = document.getElementById(`counter-value-${counterId}`);
+    const valueElementList = document.getElementById(`counter-value-${counterId}-list`);
+    
+    const currencySymbol = counter.type === 'currency' && counter.symbol ? counter.symbol : '';
+    const displayValue = newValue + currencySymbol;
+    
     if (valueElement) {
-        valueElement.textContent = newValue;
+        valueElement.innerHTML = displayValue;
+    }
+    if (valueElementList) {
+        valueElementList.innerHTML = displayValue;
     }
 
     // Aktualizuj w pamięci
@@ -929,17 +1010,22 @@ function changeView(view) {
     localStorage.setItem('licznik_view', view);
 
     const container = document.getElementById('counters-container');
-    const grid = document.getElementById('counters-grid');
+    const gridContainer = document.getElementById('counters-grid');
+    const listContainer = document.getElementById('counters-list');
 
     if (view === 'list') {
         container.classList.remove('grid-view');
         container.classList.add('list-view');
-        grid.className = 'space-y-2';
+        gridContainer.classList.add('hidden');
+        listContainer.classList.remove('hidden');
+        listContainer.className = 'space-y-2';
     } else {
         container.classList.remove('list-view');
         container.classList.add('grid-view');
+        listContainer.classList.add('hidden');
+        gridContainer.classList.remove('hidden');
         // 4 kolumny na desktop (lg breakpoint)
-        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6';
+        gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6';
     }
 
     // Aktualizuj przyciski
@@ -951,7 +1037,8 @@ function changeView(view) {
     document.getElementById('list-view-btn').classList.toggle('text-white', view === 'list');
     document.getElementById('list-view-btn').classList.toggle('text-gray-300', view !== 'list');
 
-    renderCounters();
+    // Nie renderuj ponownie, tylko pokaż odpowiedni kontener
+    updateCounterSelection();
 }
 
 // Przełącz widok
