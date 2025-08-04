@@ -1,7 +1,4 @@
-The code changes replace the original previewTemplate function with a simplified version that relies on getRealKpiDataForPreview.
-```
 
-```php
 <?php
 // Sesja i podstawowa autoryzacja
 session_start();
@@ -318,4 +315,3 @@ function getKpiPlaceholders() {
     }
 }
 ?>
-</replit_final_file>
