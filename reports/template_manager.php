@@ -250,7 +250,7 @@ function processTemplatePreview($template, $kpiData, $date) {
     // Sprawdź czy to są prawdziwe dane czy przykładowe
     $isRealData = !empty($kpiData) && !isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false);
 
-    // Zastąp placeholdery KPI
+    // Zastąp placeholdery KPI - używaj rzeczywistych ID z bazy danych
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
         $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
