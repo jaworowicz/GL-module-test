@@ -6,6 +6,13 @@ require_once __DIR__ . '/../../../includes/db.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 
 auth_require_login();
+
+// KONTROLA DOSTĘPU: Tylko administratorzy lokalizacji i superadmini mogą edytować szablony
+if (!is_admin()) {
+    http_response_code(403);
+    die(json_encode(['success' => false, 'message' => 'Brak uprawnień do edycji szablonów raportów']));
+}
+
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';

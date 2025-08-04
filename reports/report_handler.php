@@ -1,7 +1,3 @@
-The code is modified to fetch KPI data for the entire team in a location and update the preview message to reflect this change.
-```
-
-```php
 <?php
 require_once '../../../includes/auth.php';
 require_once '../../../includes/db.php';
