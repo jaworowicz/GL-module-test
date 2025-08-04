@@ -279,11 +279,17 @@ function getKpiPlaceholders() {
     global $pdo;
 
     try {
-        // Pobierz wszystkie aktywne cele KPI z bazy danych dla aktualnego użytkownika
-        $userId = $_SESSION['user_id'];
-        $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 AND user_id = ? ORDER BY id ASC";
+        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
+        $sfidId = $_SESSION['sfid_id'] ?? null;
+        if (!$sfidId) {
+            error_log("Brak sfid_id w sesji dla placeholderów KPI");
+            return ['success' => false, 'message' => 'Brak dostępu do lokalizacji'];
+        }
+
+        // Pobierz WSZYSTKIE aktywne cele KPI dla konkretnego SFID
+        $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 AND sfid_id = ? ORDER BY id ASC";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$userId]);
+        $stmt->execute([$sfidId]);
         $kpiGoals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $placeholders = [];
