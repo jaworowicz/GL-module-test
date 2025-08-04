@@ -117,8 +117,11 @@ function getKpiDataForReport($date, $pdo) {
     try {
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
+            echo "<script>console.log('🔍 DEBUG: Brak sfid_id w sesji');</script>";
             return [];
         }
+
+        echo "<script>console.log('🔍 DEBUG: sfid_id = $sfidId, date = $date');</script>";
 
         $year = date('Y', strtotime($date));
         $month = date('n', strtotime($date));
@@ -129,14 +132,20 @@ function getKpiDataForReport($date, $pdo) {
         $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        echo "<script>console.log('🔍 DEBUG: Znalezione KPI:', " . json_encode($kpiGoals) . ");</script>";
+
         $kpiData = [];
 
         foreach ($kpiGoals as $goal) {
+            echo "<script>console.log('🔍 DEBUG: Przetwarzam KPI ID=" . $goal['id'] . " (" . $goal['name'] . ")');</script>";
+            
             // Pobierz powiązane liczniki
             $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
             $linkedStmt = $pdo->prepare($linkedQuery);
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            echo "<script>console.log('🔍 DEBUG: KPI " . $goal['id'] . " - powiązane liczniki:', " . json_encode($linkedCounterIds) . ");</script>";
 
             $dailyValue = 0;
             $monthlyRealization = 0;
@@ -145,7 +154,7 @@ function getKpiDataForReport($date, $pdo) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
                 
                 // Pobierz liczniki zespołowe dla tej lokalizacji
-                $teamQuery = "SELECT DISTINCT lc.id
+                $teamQuery = "SELECT DISTINCT lc.id, lc.name, u.name as user_name
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
                              WHERE u.sfid_id = ? 
@@ -155,43 +164,48 @@ function getKpiDataForReport($date, $pdo) {
                 $teamParams = array_merge([$sfidId], $linkedCounterIds);
                 $teamStmt = $pdo->prepare($teamQuery);
                 $teamStmt->execute($teamParams);
-                $teamCounterIds = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+                $teamCounters = $teamStmt->fetchAll(PDO::FETCH_ASSOC);
+                $teamCounterIds = array_column($teamCounters, 'id');
                 
-                // Debug: sprawdź co znaleziono
-                error_log("KPI ID: " . $goal['id'] . ", Linked counters: " . implode(',', $linkedCounterIds) . ", Team counters found: " . implode(',', $teamCounterIds));
+                echo "<script>console.log('🔍 DEBUG: Zespołowe liczniki dla KPI " . $goal['id'] . ":', " . json_encode($teamCounters) . ");</script>";
 
                 if (!empty($teamCounterIds)) {
                     $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
                     
                     // Wartość za dany dzień
-                    $dailyQuery = "SELECT SUM(value) as total 
-                                  FROM licznik_daily_values 
+                    $dailyQuery = "SELECT counter_id, value, date FROM licznik_daily_values 
                                   WHERE counter_id IN ($teamPlaceholders) 
                                   AND date = ?";
                     $dailyParams = array_merge($teamCounterIds, [$date]);
                     $dailyStmt = $pdo->prepare($dailyQuery);
                     $dailyStmt->execute($dailyParams);
-                    $dailyValue = $dailyStmt->fetchColumn() ?: 0;
+                    $dailyValues = $dailyStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $dailyValue = array_sum(array_column($dailyValues, 'value'));
                     
-                    // Debug: sprawdź wartości
-                    error_log("Daily query for date $date: " . $dailyQuery);
-                    error_log("Daily params: " . print_r($dailyParams, true));
-                    error_log("Daily value result: " . $dailyValue);
+                    echo "<script>console.log('🔍 DEBUG: Wartości dzienne dla daty $date:', " . json_encode($dailyValues) . ");</script>";
+                    echo "<script>console.log('🔍 DEBUG: Suma dzienna: $dailyValue');</script>";
 
                     // REALIZACJA MIESIĘCZNA (potrzebna do dynamicznego celu dziennego)
-                    $monthlyQuery = "SELECT SUM(value) as total 
+                    $monthlyQuery = "SELECT counter_id, SUM(value) as total, COUNT(*) as days
                                     FROM licznik_daily_values 
                                     WHERE counter_id IN ($teamPlaceholders) 
-                                    AND YEAR(date) = ? AND MONTH(date) = ?";
+                                    AND YEAR(date) = ? AND MONTH(date) = ?
+                                    GROUP BY counter_id";
                     $monthlyParams = array_merge($teamCounterIds, [$year, $month]);
                     $monthlyStmt = $pdo->prepare($monthlyQuery);
                     $monthlyStmt->execute($monthlyParams);
-                    $monthlyRealization = $monthlyStmt->fetchColumn() ?: 0;
+                    $monthlyValues = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
+                    $monthlyRealization = array_sum(array_column($monthlyValues, 'total'));
+                    
+                    echo "<script>console.log('🔍 DEBUG: Realizacja miesięczna ($year-$month):', " . json_encode($monthlyValues) . ");</script>";
+                    echo "<script>console.log('🔍 DEBUG: Suma miesięczna: $monthlyRealization');</script>";
                 }
             }
 
             // Oblicz DYNAMICZNY cel dzienny (uwzględniający realizację miesięczną)
             $dailyGoal = calculateDynamicDailyGoal($goal['total_goal'], $monthlyRealization, $year, $month, $sfidId);
+
+            echo "<script>console.log('🔍 DEBUG: KPI " . $goal['id'] . " - cel dzienny: $dailyGoal');</script>";
 
             $kpiData[$goal['id']] = [
                 'value' => $dailyValue,
@@ -200,11 +214,15 @@ function getKpiDataForReport($date, $pdo) {
                 'monthly_realization' => $monthlyRealization,
                 'name' => $goal['name']
             ];
+
+            echo "<script>console.log('🔍 DEBUG: Finalne dane dla KPI " . $goal['id'] . ":', " . json_encode($kpiData[$goal['id']]) . ");</script>";
         }
 
+        echo "<script>console.log('🔍 DEBUG: WSZYSTKIE DANE KPI (finalne):', " . json_encode($kpiData) . ");</script>";
         return $kpiData;
 
     } catch (Exception $e) {
+        echo "<script>console.error('🔥 DEBUG ERROR: " . $e->getMessage() . "');</script>";
         error_log("Błąd pobierania danych KPI: " . $e->getMessage());
         return [];
     }
