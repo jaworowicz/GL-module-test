@@ -744,19 +744,22 @@ function getKpiDataForReport($date, $pdo, $limit = null) {
         $kpiData = [];
 
         foreach ($kpiGoals as $goal) {
-            $linkedCounterIds = json_decode($goal['linked_counter_ids'], true) ?: [];
+            // Pobierz powiązane liczniki z osobnej tabeli
+            $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
+            $linkedStmt = $pdo->prepare($linkedQuery);
+            $linkedStmt->execute([$goal['id']]);
+            $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
             // Pobierz wartości dla tego dnia
             $totalValue = 0;
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
                 $valueQuery = "SELECT SUM(value) as total 
-                              FROM licznik_values 
+                              FROM licznik_daily_values 
                               WHERE counter_id IN ($placeholders) 
-                              AND date = ? 
-                              AND sfid_id = ?";
+                              AND date = ?";
 
-                $params = array_merge($linkedCounterIds, [$date, $sfid]);
+                $params = array_merge($linkedCounterIds, [$date]);
                 $valueStmt = $pdo->prepare($valueQuery);
                 $valueStmt->execute($params);
                 $totalValue = $valueStmt->fetchColumn() ?: 0;
@@ -804,3 +807,27 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
 
     // W podglądzie dodaj informację o ograniczeniu
     if ($isPreview) {
+        $template = '<div style="background: #f59e0b; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+            <strong>PODGLĄD:</strong> Pokazane są tylko pierwsze 3 cele KPI
+        </div>' . $template;
+    }
+
+    return $template;
+}
+
+function calculateWorkingDaysInRange($startDate, $endDate) {
+    $workingDays = 0;
+    $start = new DateTime($startDate);
+    $end = new DateTime($endDate);
+    
+    while ($start <= $end) {
+        $dayOfWeek = $start->format('N');
+        if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+            $workingDays++;
+        }
+        $start->add(new DateInterval('P1D'));
+    }
+    
+    return $workingDays;
+}
+?>
