@@ -43,15 +43,25 @@ function getReportTemplates() {
         if (is_dir($templatesDir)) {
             $files = scandir($templatesDir);
             foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'php' && $file !== 'report_handler.php' && $file !== 'report_scripts.js') {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'php' && 
+                    $file !== 'report_handler.php' && 
+                    !strpos($file, 'report_scripts')) {
                     $name = pathinfo($file, PATHINFO_FILENAME);
-                    $displayName = $name === 'default' ? 'Raport Dzienny' : ucfirst($name) . ' Report';
+                    $displayName = $name === 'default' ? 'Raport Dzienny' : 
+                                  ucfirst(str_replace('_', ' ', $name)) . ' Report';
                     $templates[] = [
                         'filename' => $file,
                         'name' => $displayName
                     ];
                 }
             }
+        }
+
+        if (empty($templates)) {
+            $templates[] = [
+                'filename' => 'default.php',
+                'name' => 'Raport Dzienny'
+            ];
         }
 
         return ['success' => true, 'templates' => $templates];
@@ -114,7 +124,7 @@ function generateReport($templateName, $date, $pdo) {
 
 function getKpiDataForReport($date, $pdo, $limit = null) {
     try {
-        $sfid = $_SESSION['sfid_id'];
+        $sfid = $_SESSION['sfid_id'] ?? $_SESSION['user_id'] ?? 1;
 
         // Pobierz cele KPI
         $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";

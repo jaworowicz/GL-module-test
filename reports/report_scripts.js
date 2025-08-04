@@ -3,12 +3,22 @@
 // Otwórz modal szybkiego raportu
 function openQuickReportModal() {
     const modal = document.getElementById('quick-report-modal');
-    if (!modal) return;
+    if (!modal) {
+        console.error('Modal quick-report-modal nie został znaleziony');
+        showNotification('Błąd: Modal raportów nie jest dostępny', 'error');
+        return;
+    }
 
     // Załaduj dostępne szablony
     loadReportTemplates();
 
-    showModal(modal);
+    // Użyj funkcji showModal jeśli istnieje, w przeciwnym razie pokaż modal bezpośrednio
+    if (typeof showModal === 'function') {
+        showModal(modal);
+    } else {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 }
 
 // Załaduj dostępne szablony
@@ -102,8 +112,10 @@ async function generateReport() {
             newWindow.document.write(data.html);
             newWindow.document.close();
 
-            showNotification('Raport wygenerowany pomyślnie', 'success');
-            closeAllModals();
+            if (typeof showNotification === 'function') {
+                showNotification('Raport wygenerowany pomyślnie', 'success');
+            }
+            closeReportModal();
         } else {
             showNotification('Błąd generowania raportu: ' + data.message, 'error');
         }
@@ -145,14 +157,29 @@ async function downloadReport() {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
-            showNotification('Raport pobrany pomyślnie', 'success');
-            closeAllModals();
+            if (typeof showNotification === 'function') {
+                showNotification('Raport pobrany pomyślnie', 'success');
+            }
+            closeReportModal();
         } else {
             showNotification('Błąd pobierania raportu: ' + data.message, 'error');
         }
     } catch (error) {
         console.error('Błąd pobierania raportu:', error);
         showNotification('Błąd połączenia z serwerem', 'error');
+    }
+}
+
+// Funkcja pomocnicza do zamykania modali
+function closeReportModal() {
+    const modal = document.getElementById('quick-report-modal');
+    if (modal) {
+        if (typeof closeAllModals === 'function') {
+            closeAllModals();
+        } else {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
     }
 }
 
@@ -163,16 +190,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (templateSelect) {
         templateSelect.addEventListener('change', function() {
-            loadReportPreview(this.value);
+            if (this.value) {
+                loadReportPreview(this.value);
+            }
         });
     }
 
     if (dateInput) {
         dateInput.addEventListener('change', function() {
-            const template = document.getElementById('report-template').value;
-            if (template) {
-                loadReportPreview(template);
+            const template = document.getElementById('report-template');
+            if (template && template.value) {
+                loadReportPreview(template.value);
             }
         });
+    }
+
+    // Ustaw domyślną datę jeśli nie ma
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
     }
 });

@@ -60,44 +60,72 @@
             }
             .report-container { 
                 margin: 0; 
-                border-radius: 0;
+                border-radius: 4px;
+                box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             }
             .report-header { 
                 padding: 15px; 
             }
             .report-header h1 { 
-                font-size: 1.5rem; 
-                margin: 0 0 10px 0;
+                font-size: 1.4rem; 
+                margin: 0 0 8px 0;
             }
             .report-table { 
                 font-size: 12px; 
+                overflow-x: auto;
+                display: block;
+                white-space: nowrap;
+            }
+            .report-table thead, .report-table tbody, .report-table tr {
+                display: table;
+                width: 100%;
+                table-layout: fixed;
             }
             .report-table th, .report-table td { 
-                padding: 6px 4px; 
+                padding: 8px 4px; 
+                word-wrap: break-word;
             }
             .section-header { 
                 font-size: 13px; 
-                padding: 6px 8px;
+                padding: 8px;
+                background: #94a3b8 !important;
             }
         }
         
         @media (max-width: 480px) {
             body {
                 padding: 5px;
+                font-size: 12px;
+            }
+            .report-header { 
+                padding: 10px; 
             }
             .report-header h1 { 
-                font-size: 1.2rem; 
+                font-size: 1.1rem; 
+                margin: 0 0 5px 0;
+            }
+            .report-header p {
+                font-size: 12px;
+                margin: 0;
             }
             .report-table { 
                 font-size: 10px; 
             }
             .report-table th, .report-table td { 
                 padding: 4px 2px; 
+                font-size: 9px;
             }
             .section-header {
-                font-size: 11px;
-                padding: 4px 6px;
+                font-size: 10px;
+                padding: 4px;
+                font-weight: bold;
             }
+        }
+        
+        /* Zapewnienie czytelności na wszystkich urządzeniach */
+        @media print {
+            body { background: white; }
+            .report-container { box-shadow: none; }
         }
     </style>
 </head>
