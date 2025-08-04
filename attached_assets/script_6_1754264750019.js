@@ -334,7 +334,7 @@ function getDailyGoalForCounter(counterId) {
     // Jeśli jest więcej niż jeden cel, wybierz ten z najmniejszą liczbą powiązanych liczników
     // (priorytet dla celów pojedynczych nad zespołowymi)
     let selectedKpiGoal = matchingKpiGoals[0];
-    
+
     if (matchingKpiGoals.length > 1) {
         selectedKpiGoal = matchingKpiGoals.reduce((prev, current) => {
             const prevLinkedCount = (prev.linked_counter_ids || []).length;
@@ -425,10 +425,10 @@ async function adjustCounterValue(counterId, direction) {
     // Natychmiastowa aktualizacja UI w obu widokach
     const valueElement = document.getElementById(`counter-value-${counterId}`);
     const valueElementList = document.getElementById(`counter-value-${counterId}-list`);
-    
+
     const currencySymbol = counter.type === 'currency' && counter.symbol ? counter.symbol : '';
     const displayValue = newValue + currencySymbol;
-    
+
     if (valueElement) {
         valueElement.innerHTML = displayValue;
     }
@@ -844,7 +844,7 @@ async function deleteKpiGoal(goalId) {
             })
         });
 
-        const data = await response.json();
+        const data = await previous_generation> response.json();
 
         if (data.success) {
             showNotification('Cel KPI usunięty pomyślnie', 'success');
@@ -926,7 +926,7 @@ function populateCategoryDropdown() {
         const hasActiveCounters = currentCounters.some(counter => 
             counter.category_id == category.id
         );
-        
+
         if (hasActiveCounters) {
             const item = document.createElement('div');
             item.className = 'category-menu-item';
@@ -1104,47 +1104,49 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
         }
     });
 
-    // Przełącz obecne menu
+    // Określ prawidłowy identyfikator menu
     const menuId = viewType === 'list' ? `counter-menu-${counterId}-list` : `counter-menu-${counterId}`;
     const menu = document.getElementById(menuId);
-    if (menu) {
-        const isHidden = menu.classList.contains('hidden');
-        menu.classList.toggle('hidden');
-        
-        // Ustaw pozycję względem przycisku dla wszystkich widoków
-        if (isHidden) { // Jeśli menu było ukryte i teraz je pokazujemy
-            const button = event ? event.target.closest('button') : 
-                          document.querySelector(`[onclick*="toggleCounterMenu(${counterId}"]`);
+
+    if (!menu) {
+        console.error('Menu nie zostało znalezione:', menuId);
+        return;
+    }
+
+    const isHidden = menu.classList.contains('hidden');
+
+    if (isHidden) {
+        // Pokazuj menu
+        menu.classList.remove('hidden');
+
+        // Pozycjonowanie relative dla menu w widoku siatki
+        if (viewType === 'grid') {
+            menu.style.position = 'absolute';
+            menu.style.top = '100%';
+            menu.style.right = '0';
+            menu.style.left = 'auto';
+            menu.style.zIndex = '1000';
+        } else {
+            // Pozycjonowanie fixed dla menu w widoku listy
+            const button = event ? event.target.closest('button') : null;
             if (button) {
                 const rect = button.getBoundingClientRect();
                 menu.style.position = 'fixed';
                 menu.style.zIndex = '1000';
-                
-                // Prostsze pozycjonowanie - zawsze z prawej strony, z małym offsetem
-                menu.style.left = (rect.right + 5) + 'px';
+
+                // Pozycjonuj z lewej strony przycisku
+                menu.style.left = (rect.left - 180) + 'px';
                 menu.style.top = rect.top + 'px';
-                
-                // Sprawdź czy menu wychodzi poza ekran i dostosuj
-                setTimeout(() => {
-                    const menuRect = menu.getBoundingClientRect();
-                    
-                    // Jeśli menu wychodzi poza prawą krawędź
-                    if (menuRect.right > window.innerWidth) {
-                        menu.style.left = (rect.left - menuRect.width - 5) + 'px';
-                    }
-                    
-                    // Jeśli menu wychodzi poza dolną krawędź
-                    if (menuRect.bottom > window.innerHeight) {
-                        menu.style.top = (window.innerHeight - menuRect.height - 10) + 'px';
-                    }
-                    
-                    // Jeśli menu wychodzi poza górną krawędź
-                    if (menuRect.top < 0) {
-                        menu.style.top = '10px';
-                    }
-                }, 10);
+
+                // Sprawdź czy menu nie wychodzi poza ekran
+                if (rect.left < 200) {
+                    menu.style.left = (rect.right + 5) + 'px';
+                }
             }
         }
+    } else {
+        // Ukryj menu
+        menu.classList.add('hidden');
     }
 }
 
@@ -1164,7 +1166,7 @@ function openAddAmountModal(counterId) {
     const listMenu = document.getElementById(`counter-menu-${counterId}-list`);
     if (gridMenu) gridMenu.classList.add('hidden');
     if (listMenu) listMenu.classList.add('hidden');
-    
+
     showModal(modal);
 }
 
@@ -1184,7 +1186,7 @@ function openSetValueModal(counterId) {
     const listMenu = document.getElementById(`counter-menu-${counterId}-list`);
     if (gridMenu) gridMenu.classList.add('hidden');
     if (listMenu) listMenu.classList.add('hidden');
-    
+
     showModal(modal);
 }
 
@@ -1257,15 +1259,15 @@ function updateDailyGoalsDisplay() {
         if (viewType === 'list') {
             const goalContainer = document.getElementById(`daily-goals-${counterId}-list`);
             const goalSummary = document.getElementById(`daily-goals-summary-${counterId}-list`);
-            
+
             if (goalContainer && goalSummary) {
                 if (dailyGoal && typeof dailyGoal === 'object') {
                     const personalGoalText = dailyGoal.current >= dailyGoal.total ? 
                         `✅ Osobisty: ${dailyGoal.current}/${dailyGoal.total}` : 
                         `Osobisty: ${dailyGoal.current}/${dailyGoal.total}`;
-                    
+
                     goalContainer.innerHTML = personalGoalText;
-                    
+
                     if (dailyGoal.teamDaily > 0) {
                         goalSummary.innerHTML = `Zespół: ${dailyGoal.teamDaily}`;
                     } else {
@@ -1278,19 +1280,19 @@ function updateDailyGoalsDisplay() {
             }
         } else {
             const goalContainer = document.getElementById(`daily-goals-${counterId}`);
-            
+
             if (goalContainer) {
                 if (dailyGoal && typeof dailyGoal === 'object') {
                     const personalGoalText = dailyGoal.current >= dailyGoal.total ? 
                         `✅ Cel: ${dailyGoal.current}/${dailyGoal.total}` : 
                         `Cel: ${dailyGoal.current}/${dailyGoal.total}`;
-                    
+
                     let goalHtml = `<div class="daily-goal">${personalGoalText}</div>`;
-                    
+
                     if (dailyGoal.teamDaily > 0) {
                         goalHtml += `<div class="daily-goal">Zespół: ${dailyGoal.teamDaily}</div>`;
                     }
-                    
+
                     goalContainer.innerHTML = goalHtml;
                 } else {
                     goalContainer.innerHTML = '';

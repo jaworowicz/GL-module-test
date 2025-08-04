@@ -563,10 +563,15 @@ body {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     white-space: nowrap;
     display: block;
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .counter-menu.hidden {
-    display: none;
+    display: none !important;
+    opacity: 0;
+    transform: scale(0.95);
 }
 
 .counter-menu button {
