@@ -5,6 +5,9 @@ require_once '../../../includes/db.php';
 auth_require_login();
 header('Content-Type: application/json');
 
+// Połączenie z bazą danych - używaj tego samego co główny moduł
+global $pdo;
+
 $action = $_POST['action'] ?? '';
 
 try {
@@ -14,11 +17,11 @@ try {
             break;
 
         case 'get_report_preview':
-            echo json_encode(getReportPreview($_POST['template'], $_POST['date'], $pdo));
+            echo json_encode(getReportPreview($_POST['template'], $_POST['date']));
             break;
 
         case 'generate_report':
-            echo json_encode(generateReport($_POST['template'], $_POST['date'], $pdo));
+            echo json_encode(generateReport($_POST['template'], $_POST['date']));
             break;
 
         default:
@@ -58,7 +61,8 @@ function getCustomTemplates() {
     return ['success' => true, 'templates' => $templates];
 }
 
-function getReportPreview($templateId, $date, $pdo) {
+function getReportPreview($templateId, $date) {
+    global $pdo;
     try {
         // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
@@ -77,7 +81,10 @@ function getReportPreview($templateId, $date, $pdo) {
         }
 
         // Pobierz WSZYSTKIE dane KPI - nie limituj w podglądzie
-        $kpiData = getKpiDataForReport($date, $pdo);
+        $kpiData = getKpiDataForReport($date);
+        
+        // Debug - sprawdź czy dane zostały pobrane
+        error_log("Debug KPI preview data for date $date: " . print_r($kpiData, true));
 
         // Przetwórz szablon
         $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
@@ -100,7 +107,8 @@ function getReportPreview($templateId, $date, $pdo) {
     }
 }
 
-function generateReport($templateId, $date, $pdo) {
+function generateReport($templateId, $date) {
+    global $pdo;
     try {
         // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
@@ -119,7 +127,10 @@ function generateReport($templateId, $date, $pdo) {
         }
 
         // Pobierz wszystkie dane KPI
-        $kpiData = getKpiDataForReport($date, $pdo);
+        $kpiData = getKpiDataForReport($date);
+        
+        // Debug - sprawdź czy dane zostały pobrane
+        error_log("Debug KPI data for date $date: " . print_r($kpiData, true));
 
         // Przetwórz szablon
         $reportHtml = processReportTemplate($htmlContent, $kpiData, $date, false);
@@ -131,7 +142,8 @@ function generateReport($templateId, $date, $pdo) {
     }
 }
 
-function getKpiDataForReport($date, $pdo, $limit = null) {
+function getKpiDataForReport($date, $limit = null) {
+    global $pdo;
     try {
         // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
         $sfidId = $_SESSION['sfid_id'] ?? null;
