@@ -29,8 +29,8 @@ $counters_stmt = $pdo->prepare($counters_query);
 $counters_stmt->execute([$current_sfid]);
 $counters = $counters_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Pobierz cele KPI
-$kpi_query = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? ORDER BY name";
+// Pobierz cele KPI sortowane po ID
+$kpi_query = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
 $kpi_stmt = $pdo->prepare($kpi_query);
 $kpi_stmt->execute([$current_sfid]);
 $kpi_goals = $kpi_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -306,18 +306,14 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                     </div>
                 </div>
                 <?php if ($is_admin): ?>
-                <button onclick="openAddCounterModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">Dodaj Licznik (Admin)</button>
-                <?php else: ?>
-                <button class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled title="Tylko dla administratorów">Dodaj Licznik (Admin)</button>
+                <button onclick="openAddCounterModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">Dodaj Licznik</button>
+                <button onclick="openAddCategoryModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">Dodaj Kategorię</button>
                 <?php endif; ?>
-                <button onclick="openPublicView()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">Widok Publiczny</button>
+                <button onclick="openPublicView()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg">Widok Publiczny</button>
             </div>
 
             <!-- Right side: User, Date, and View controls -->
             <div class="flex flex-wrap items-center gap-2">
-                <button id="unlock-button" class="hidden bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded-lg flex items-center">
-                    <i class="fas fa-lock-open mr-2"></i> Odblokuj edycję
-                </button>
                 <select id="user-selector" class="custom-input text-sm">
                     <?php foreach ($users as $user): ?>
                     <option value="<?php echo $user['id']; ?>" <?php echo ($user['id'] == $current_user_id) ? 'selected' : ''; ?>>
@@ -327,7 +323,6 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                 </select>
                 <input type="date" id="date-selector" class="custom-input text-sm" value="<?php echo $today; ?>">
                 <div class="flex items-center space-x-2 bg-gray-700 border border-gray-600 rounded-lg p-1">
-                    <button id="add-counter-btn" class="px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-600" onclick="openAddCounterModal()" title="Dodaj nowy licznik osobisty"><i class="fas fa-plus"></i></button>
                     <button id="grid-view-btn" class="px-3 py-1 rounded-md text-sm bg-gray-500 text-white" onclick="changeView('grid')" title="Widok siatki (V)"><i class="fas fa-th-large"></i></button>
                     <button id="list-view-btn" class="px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-600" onclick="changeView('list')" title="Widok listy (V)"><i class="fas fa-bars"></i></button>
                 </div>
@@ -342,6 +337,7 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div><span>D</span>Usuń</div>
             <div><span>V</span>Zmień widok</div>
             <div><span>K</span>Zmień kategorię</div>
+            <div><span>ENTER</span>Large Tile</div>
             <div><span>ESC</span>Zamknij okno</div>
         </div>
     </header>
@@ -428,23 +424,67 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                     <input type="color" id="edit-counter-color" class="w-full h-10 p-1 custom-input cursor-pointer">
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="flex items-center space-x-2">
-                            <input type="checkbox" id="edit-counter-is-currency" class="rounded border-gray-600 bg-gray-700 text-green-600">
-                            <span class="text-sm font-medium text-gray-300">Licznik walutowy</span>
-                        </label>
-                    </div>
-                    <div>
-                        <label for="edit-counter-symbol" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
-                        <input type="text" id="edit-counter-symbol" class="w-full custom-input" placeholder="zł, €, $">
-                    </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="edit-counter-is-personal" class="rounded border-gray-600 bg-gray-700 text-green-600">
+                    <label for="edit-counter-is-personal" class="text-sm font-medium text-gray-300">Licznik osobisty</label>
                 </div>
             </div>
 
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
                 <button onclick="saveCounterSettings()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Zapisz ustawienia</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Counter Modal -->
+    <div id="add-counter-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-white p-6 border-b border-slate-700">Dodaj nowy licznik</h2>
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="new-counter-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa licznika</label>
+                    <input type="text" id="new-counter-name" class="w-full custom-input" placeholder="np. Nowe umowy">
+                </div>
+                <div>
+                    <label for="new-counter-increment" class="block text-sm font-medium text-gray-300 mb-1">Krok zmiany</label>
+                    <input type="number" id="new-counter-increment" class="w-full custom-input" placeholder="1" value="1">
+                </div>
+                <div>
+                    <label for="new-counter-category" class="block text-sm font-medium text-gray-300 mb-1">Kategoria</label>
+                    <select id="new-counter-category" class="w-full custom-input">
+                        <!-- Category options populated by JS -->
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="new-counter-is-personal" class="rounded border-gray-600 bg-gray-700 text-green-600">
+                    <label for="new-counter-is-personal" class="text-sm font-medium text-gray-300">Licznik osobisty</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
+                <button onclick="addNewCounter()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj licznik</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div id="add-category-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-white p-6 border-b border-slate-700">Dodaj nową kategorię</h2>
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="new-category-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa kategorii</label>
+                    <input type="text" id="new-category-name" class="w-full custom-input" placeholder="np. Sprzedaż">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
+                <button onclick="addNewCategory()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj kategorię</button>
             </div>
         </div>
     </div>
@@ -479,31 +519,49 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
         </div>
     </div>
 
-    <!-- Add Counter Modal -->
-    <div id="add-counter-modal" class="modal-overlay hidden">
+    <!-- KPI Details Modal -->
+    <div id="kpi-details-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <h2 id="kpi-details-title" class="text-2xl font-bold mb-6 text-white p-6 border-b border-slate-700">Szczegóły KPI</h2>
+
+            <div class="p-6">
+                <div id="kpi-weekly-breakdown" class="overflow-x-auto">
+                    <!-- Weekly breakdown will be rendered here -->
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Zamknij</button>
+                <?php if ($is_admin): ?>
+                <button onclick="openKpiCorrectionModal()" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-500">Dodaj Korektę</button>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Manual Correction Modal -->
+    <div id="kpi-correction-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <h2 class="text-2xl font-bold mb-4 text-white p-6 border-b border-slate-700">Dodaj nowy licznik</h2>
+            <h2 class="text-2xl font-bold mb-6 text-white p-6 border-b border-slate-700">Korekta Ręczna KPI</h2>
 
             <div class="p-6 space-y-4">
                 <div>
-                    <label for="new-counter-name" class="block text-sm font-medium text-gray-300 mb-1">Nazwa licznika</label>
-                    <input type="text" id="new-counter-name" class="w-full custom-input" placeholder="np. Nowe umowy">
+                    <label for="correction-date" class="block text-sm font-medium text-gray-300 mb-1">Data korekty</label>
+                    <input type="date" id="correction-date" class="w-full custom-input" value="<?php echo $today; ?>">
                 </div>
                 <div>
-                    <label for="new-counter-increment" class="block text-sm font-medium text-gray-300 mb-1">Krok zmiany</label>
-                    <input type="number" id="new-counter-increment" class="w-full custom-input" placeholder="1" value="1">
+                    <label for="correction-value" class="block text-sm font-medium text-gray-300 mb-1">Wartość korekty</label>
+                    <input type="number" id="correction-value" class="w-full custom-input" placeholder="0">
                 </div>
                 <div>
-                    <label for="new-counter-category" class="block text-sm font-medium text-gray-300 mb-1">Kategoria</label>
-                    <select id="new-counter-category" class="w-full custom-input">
-                        <!-- Category options populated by JS -->
-                    </select>
+                    <label for="correction-description" class="block text-sm font-medium text-gray-300 mb-1">Opis korekty</label>
+                    <textarea id="correction-description" class="w-full custom-input" rows="3" placeholder="Opcjonalny opis korekty"></textarea>
                 </div>
             </div>
 
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
-                <button onclick="addNewCounter()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj licznik</button>
+                <button onclick="saveKpiCorrection()" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-500">Dodaj Korektę</button>
             </div>
         </div>
     </div>
