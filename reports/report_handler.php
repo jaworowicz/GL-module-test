@@ -101,7 +101,7 @@ function generateReport($templateName, $date, $pdo) {
 
 function getKpiDataForReport($date, $pdo, $limit = null) {
     try {
-        $sfid = $_SESSION['sfid_id'] ?? $_SESSION['user_id'] ?? 1;
+        $sfidId = $_SESSION['sfid_id'] ?? 1;
 
         // Pobierz cele KPI
         $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
@@ -110,7 +110,7 @@ function getKpiDataForReport($date, $pdo, $limit = null) {
         }
 
         $kpiStmt = $pdo->prepare($kpiQuery);
-        $kpiStmt->execute([$sfid]);
+        $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $kpiData = [];
