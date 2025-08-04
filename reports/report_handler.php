@@ -120,6 +120,9 @@ function getKpiDataForReport($date, $pdo) {
             return [];
         }
 
+        $year = date('Y', strtotime($date));
+        $month = date('n', strtotime($date));
+
         // Pobierz WSZYSTKIE cele KPI dla lokalizacji
         $kpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
@@ -135,11 +138,13 @@ function getKpiDataForReport($date, $pdo) {
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            $totalValue = 0;
+            $dailyValue = 0;
+            $monthlyRealization = 0;
+            
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
                 
-                // Pobierz wartości dla CAŁEGO ZESPOŁU z lokalizacji
+                // Pobierz liczniki zespołowe dla tej lokalizacji
                 $teamQuery = "SELECT DISTINCT lc.id
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
@@ -153,32 +158,37 @@ function getKpiDataForReport($date, $pdo) {
 
                 if (!empty($teamCounterIds)) {
                     $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
-                    $valueQuery = "SELECT SUM(value) as total 
+                    
+                    // Wartość za dany dzień
+                    $dailyQuery = "SELECT SUM(value) as total 
                                   FROM licznik_daily_values 
                                   WHERE counter_id IN ($teamPlaceholders) 
                                   AND date = ?";
+                    $dailyParams = array_merge($teamCounterIds, [$date]);
+                    $dailyStmt = $pdo->prepare($dailyQuery);
+                    $dailyStmt->execute($dailyParams);
+                    $dailyValue = $dailyStmt->fetchColumn() ?: 0;
 
-                    $params = array_merge($teamCounterIds, [$date]);
-                    $valueStmt = $pdo->prepare($valueQuery);
-                    $valueStmt->execute($params);
-                    $totalValue = $valueStmt->fetchColumn() ?: 0;
+                    // REALIZACJA MIESIĘCZNA (potrzebna do dynamicznego celu dziennego)
+                    $monthlyQuery = "SELECT SUM(value) as total 
+                                    FROM licznik_daily_values 
+                                    WHERE counter_id IN ($teamPlaceholders) 
+                                    AND YEAR(date) = ? AND MONTH(date) = ?";
+                    $monthlyParams = array_merge($teamCounterIds, [$year, $month]);
+                    $monthlyStmt = $pdo->prepare($monthlyQuery);
+                    $monthlyStmt->execute($monthlyParams);
+                    $monthlyRealization = $monthlyStmt->fetchColumn() ?: 0;
                 }
             }
 
-            // Oblicz cel dzienny
-            $dailyGoal = 0;
-            if ($goal['total_goal'] > 0) {
-                $monthStart = date('Y-m-01', strtotime($date));
-                $monthEnd = date('Y-m-t', strtotime($date));
-                $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
-                $dailyGoal = ceil($goal['total_goal'] / $workingDays);
-            }
+            // Oblicz DYNAMICZNY cel dzienny (uwzględniający realizację miesięczną)
+            $dailyGoal = calculateDynamicDailyGoal($goal['total_goal'], $monthlyRealization, $year, $month, $sfidId);
 
-            // RZECZYWISTE ID z bazy
             $kpiData[$goal['id']] = [
-                'value' => $totalValue,
+                'value' => $dailyValue,
                 'daily_goal' => $dailyGoal,
                 'monthly_goal' => $goal['total_goal'],
+                'monthly_realization' => $monthlyRealization,
                 'name' => $goal['name']
             ];
         }
@@ -266,6 +276,60 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
         $start->add(new DateInterval('P1D'));
     }
 
+    return $workingDays;
+}
+
+// Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację i pozostałe dni
+function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $month, $sfidId) {
+    global $pdo;
+    
+    // Pobierz dni robocze z tabeli lub oblicz automatycznie
+    $workingDaysQuery = "SELECT working_days FROM global_working_hours WHERE sfid_id = ? AND year = ? AND month = ?";
+    $stmt = $pdo->prepare($workingDaysQuery);
+    $stmt->execute([$sfidId, $year, $month]);
+    $workingDaysData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $totalWorkingDays = $workingDaysData['working_days'] ?? getWorkingDaysInMonth($year, $month);
+    
+    $today = date('j');
+    $currentMonth = date('n');
+    $currentYear = date('Y');
+    
+    $remainingWorkingDays = $totalWorkingDays;
+    
+    // Jeśli to bieżący miesiąc, oblicz pozostałe dni robocze
+    if ($year == $currentYear && $month == $currentMonth) {
+        $remainingWorkingDays = 0;
+        for ($day = $today; $day <= cal_days_in_month(CAL_GREGORIAN, $month, $year); $day++) {
+            $dayOfWeek = date('N', mktime(0, 0, 0, $month, $day, $year));
+            if ($dayOfWeek < 6) {
+                $remainingWorkingDays++;
+            }
+        }
+    }
+    
+    // Oblicz ile jeszcze trzeba zrealizować
+    $remainingGoal = max(0, $totalGoal - $currentRealization);
+    
+    if ($remainingWorkingDays <= 0) {
+        return 0;
+    }
+    
+    // Cel dzienny = pozostały cel / pozostałe dni robocze
+    return round($remainingGoal / $remainingWorkingDays);
+}
+
+function getWorkingDaysInMonth($year, $month) {
+    $workingDays = 0;
+    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+    
+    for ($day = 1; $day <= $daysInMonth; $day++) {
+        $dayOfWeek = date('N', mktime(0, 0, 0, $month, $day, $year));
+        if ($dayOfWeek < 6) {
+            $workingDays++;
+        }
+    }
+    
     return $workingDays;
 }
 ?>
