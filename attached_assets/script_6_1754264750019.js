@@ -467,6 +467,9 @@ async function addNewCounter() {
     const title = document.getElementById('new-counter-name').value.trim();
     const increment = document.getElementById('new-counter-increment').value;
     const categoryId = document.getElementById('new-counter-category').value;
+    // Obsługa typu walutowego
+    const isCurrency = document.getElementById('new-counter-is-currency')?.checked || false;
+    const symbol = document.getElementById('new-counter-symbol')?.value.trim() || '';
 
     if (!title) {
         showNotification('Nazwa licznika jest wymagana', 'error');
@@ -484,7 +487,9 @@ async function addNewCounter() {
                 title: title,
                 increment: increment,
                 category_id: categoryId,
-                color: '#374151'
+                color: '#374151',
+                type: isCurrency ? 'currency' : 'number',
+                symbol: isCurrency ? symbol : null
             })
         });
 

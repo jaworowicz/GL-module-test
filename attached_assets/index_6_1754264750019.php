@@ -424,9 +424,17 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                     <input type="color" id="edit-counter-color" class="w-full h-10 p-1 custom-input cursor-pointer">
                 </div>
 
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" id="edit-counter-is-personal" class="rounded border-gray-600 bg-gray-700 text-green-600">
-                    <label for="edit-counter-is-personal" class="text-sm font-medium text-gray-300">Licznik osobisty</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="edit-counter-is-currency" class="rounded border-gray-600 bg-gray-700 text-green-600">
+                            <span class="text-sm font-medium text-gray-300">Licznik walutowy</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label for="edit-counter-symbol" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
+                        <input type="text" id="edit-counter-symbol" class="w-full custom-input" placeholder="zł, €, $">
+                    </div>
                 </div>
             </div>
 
@@ -457,9 +465,17 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                         <!-- Category options populated by JS -->
                     </select>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" id="new-counter-is-personal" class="rounded border-gray-600 bg-gray-700 text-green-600">
-                    <label for="new-counter-is-personal" class="text-sm font-medium text-gray-300">Licznik osobisty</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" id="new-counter-is-currency" class="rounded border-gray-600 bg-gray-700 text-green-600">
+                            <span class="text-sm font-medium text-gray-300">Licznik walutowy</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label for="new-counter-symbol" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
+                        <input type="text" id="new-counter-symbol" class="w-full custom-input" placeholder="zł, €, $">
+                    </div>
                 </div>
             </div>
 
