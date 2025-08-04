@@ -1,16 +1,9 @@
-
 <?php
-// Poprawne ścieżki względne do katalogu głównego
-if (file_exists(__DIR__ . '/../attached_assets/auth_1754256310437.php')) {
-    require_once __DIR__ . '/../attached_assets/auth_1754256310437.php';
-} else {
-    // Prosta funkcja auth jeśli plik nie istnieje
-    function auth_require_login() {
-        // Placeholder - zawsze zezwalaj w środowisku deweloperskim
-        return true;
-    }
-}
-require_once __DIR__ . '/../includes/db.php';
+// Sesja i podstawowa autoryzacja
+session_start();
+
+require_once __DIR__ . '/../../../includes/db.php';
+require_once __DIR__ . '/../../../includes/auth.php';
 
 auth_require_login();
 header('Content-Type: application/json');
@@ -22,23 +15,23 @@ try {
         case 'get_templates':
             echo json_encode(getTemplates());
             break;
-            
+
         case 'get_template':
             echo json_encode(getTemplate($_POST['template_id']));
             break;
-            
+
         case 'save_template':
             echo json_encode(saveTemplate());
             break;
-            
+
         case 'delete_template':
             echo json_encode(deleteTemplate($_POST['template_id']));
             break;
-            
+
         case 'preview_template':
             echo json_encode(previewTemplate($_POST['html_content'], $_POST['date']));
             break;
-            
+
         default:
             echo json_encode(['success' => false, 'message' => 'Nieznana akcja']);
     }
@@ -51,10 +44,10 @@ function getTemplates() {
     if (!is_dir($templatesDir)) {
         mkdir($templatesDir, 0755, true);
     }
-    
+
     $templates = [];
     $files = glob($templatesDir . '*.json');
-    
+
     foreach ($files as $file) {
         $data = json_decode(file_get_contents($file), true);
         if ($data) {
@@ -66,22 +59,22 @@ function getTemplates() {
             ];
         }
     }
-    
+
     return ['success' => true, 'templates' => $templates];
 }
 
 function getTemplate($templateId) {
     $templateFile = __DIR__ . '/templates/' . $templateId . '.json';
-    
+
     if (!file_exists($templateFile)) {
         return ['success' => false, 'message' => 'Szablon nie istnieje'];
     }
-    
+
     $data = json_decode(file_get_contents($templateFile), true);
     if (!$data) {
         return ['success' => false, 'message' => 'Błąd odczytu szablonu'];
     }
-    
+
     return ['success' => true, 'template' => $data];
 }
 
@@ -90,16 +83,16 @@ function saveTemplate() {
     $name = trim($_POST['name'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $htmlContent = $_POST['html_content'] ?? '';
-    
+
     if (empty($name)) {
         return ['success' => false, 'message' => 'Nazwa szablonu jest wymagana'];
     }
-    
+
     // Jeśli to nowy szablon, wygeneruj ID
     if (empty($templateId)) {
         $templateId = 'template_' . time() . '_' . rand(1000, 9999);
     }
-    
+
     $templateData = [
         'id' => $templateId,
         'name' => $name,
@@ -108,14 +101,14 @@ function saveTemplate() {
         'created' => date('Y-m-d H:i:s'),
         'updated' => date('Y-m-d H:i:s')
     ];
-    
+
     $templatesDir = __DIR__ . '/templates/';
     if (!is_dir($templatesDir)) {
         mkdir($templatesDir, 0755, true);
     }
-    
+
     $templateFile = $templatesDir . $templateId . '.json';
-    
+
     if (file_put_contents($templateFile, json_encode($templateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))) {
         return ['success' => true, 'message' => 'Szablon zapisany', 'template_id' => $templateId];
     } else {
@@ -127,13 +120,13 @@ function deleteTemplate($templateId) {
     if (empty($templateId)) {
         return ['success' => false, 'message' => 'ID szablonu jest wymagane'];
     }
-    
+
     $templateFile = __DIR__ . '/templates/' . $templateId . '.json';
-    
+
     if (!file_exists($templateFile)) {
         return ['success' => false, 'message' => 'Szablon nie istnieje'];
     }
-    
+
     if (unlink($templateFile)) {
         return ['success' => true, 'message' => 'Szablon usunięty'];
     } else {
@@ -143,14 +136,14 @@ function deleteTemplate($templateId) {
 
 function previewTemplate($htmlContent, $date) {
     global $pdo;
-    
+
     if (empty($htmlContent)) {
         return ['success' => true, 'preview' => '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>'];
     }
-    
+
     // Pobierz prawdziwe dane KPI z modułu
     $realKpiData = getRealKpiDataForPreview($date, $pdo);
-    
+
     // Jeśli brak prawdziwych danych, użyj przykładowych
     if (empty($realKpiData)) {
         $realKpiData = [
@@ -159,10 +152,10 @@ function previewTemplate($htmlContent, $date) {
             3 => ['value' => 12, 'daily_goal' => 15, 'monthly_goal' => 300, 'name' => 'Oferty (przykład)']
         ];
     }
-    
+
     // Przetwórz szablon
     $preview = processTemplatePreview($htmlContent, $realKpiData, $date);
-    
+
     return ['success' => true, 'preview' => $preview];
 }
 
@@ -173,7 +166,7 @@ function getRealKpiDataForPreview($date, $pdo) {
         $sfidStmt = $pdo->prepare($sfidQuery);
         $sfidStmt->execute();
         $sfidId = $sfidStmt->fetchColumn();
-        
+
         if (!$sfidId) {
             return []; // Brak danych KPI
         }
@@ -237,7 +230,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
     $workingDays = 0;
     $start = new DateTime($startDate);
     $end = new DateTime($endDate);
-    
+
     while ($start <= $end) {
         $dayOfWeek = $start->format('N');
         if ($dayOfWeek < 6) { // Poniedziałek-Piątek
@@ -245,7 +238,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
         }
         $start->add(new DateInterval('P1D'));
     }
-    
+
     return $workingDays;
 }
 
@@ -253,10 +246,10 @@ function processTemplatePreview($template, $kpiData, $date) {
     // Zastąp datę raportu
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
-    
+
     // Sprawdź czy to są prawdziwe dane czy przykładowe
     $isRealData = !empty($kpiData) && !isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false);
-    
+
     // Zastąp placeholdery KPI
     foreach ($kpiData as $kpiId => $data) {
         $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
@@ -264,14 +257,14 @@ function processTemplatePreview($template, $kpiData, $date) {
         $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $data['monthly_goal'], $template);
         $template = str_replace('{KPI_NAME=' . $kpiId . '}', $data['name'], $template);
     }
-    
+
     // Usuń nieużywane placeholdery
     $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">BRAK DANYCH</span>', $template);
-    
+
     // Dodaj informację o podglądzie
     $headerText = $isRealData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - DANE PRZYKŁADOWE';
     $headerColor = $isRealData ? '#16a34a' : '#3b82f6';
-    
+
     if (strpos($template, '<body') !== false) {
         $template = str_replace('<body', '<body style="border: 3px solid ' . $headerColor . '; margin: 10px; padding: 10px; position: relative;"', $template);
         $template = str_replace('<body', '<body><div style="position: absolute; top: 0; left: 0; right: 0; background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold;">' . $headerText . '</div><div style="margin-top: 50px;"', $template);
@@ -280,7 +273,7 @@ function processTemplatePreview($template, $kpiData, $date) {
         // Jeśli brak znacznika body, dodaj header na początku
         $template = '<div style="background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">' . $headerText . '</div>' . $template;
     }
-    
+
     return $template;
 }
 ?>

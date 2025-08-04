@@ -1,7 +1,6 @@
-
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once '../../../includes/auth.php';
+require_once '../../../includes/db.php';
 
 auth_require_login();
 header('Content-Type: application/json');
@@ -34,10 +33,10 @@ function getCustomTemplates() {
     if (!is_dir($templatesDir)) {
         mkdir($templatesDir, 0755, true);
     }
-    
+
     $templates = [];
     $files = glob($templatesDir . '*.json');
-    
+
     foreach ($files as $file) {
         $data = json_decode(file_get_contents($file), true);
         if ($data) {
@@ -47,7 +46,7 @@ function getCustomTemplates() {
             ];
         }
     }
-    
+
     // Dodaj domyślny szablon jeśli brak niestandardowych
     if (empty($templates)) {
         $templates[] = [
@@ -55,7 +54,7 @@ function getCustomTemplates() {
             'name' => 'Domyślny raport KPI'
         ];
     }
-    
+
     return ['success' => true, 'templates' => $templates];
 }
 
@@ -63,7 +62,7 @@ function getReportPreview($templateId, $date, $pdo) {
     try {
         // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
-        
+
         if (file_exists($customTemplateFile)) {
             // Niestandardowy szablon
             $templateData = json_decode(file_get_contents($customTemplateFile), true);
@@ -105,7 +104,7 @@ function generateReport($templateId, $date, $pdo) {
     try {
         // Sprawdź czy to niestandardowy szablon
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
-        
+
         if (file_exists($customTemplateFile)) {
             // Niestandardowy szablon
             $templateData = json_decode(file_get_contents($customTemplateFile), true);
@@ -225,7 +224,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
     $workingDays = 0;
     $start = new DateTime($startDate);
     $end = new DateTime($endDate);
-    
+
     while ($start <= $end) {
         $dayOfWeek = $start->format('N');
         if ($dayOfWeek < 6) { // Poniedziałek-Piątek
@@ -233,7 +232,7 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
         }
         $start->add(new DateInterval('P1D'));
     }
-    
+
     return $workingDays;
 }
 ?>
