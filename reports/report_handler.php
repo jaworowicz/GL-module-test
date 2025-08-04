@@ -71,7 +71,12 @@ function getReportPreview($templateId, $date) {
         } else {
             $templatePath = __DIR__ . '/default.php';
             if (!file_exists($templatePath)) {
-                return ['success' => false, 'message' => 'Szablon nie istnieje'];
+                $debugInfo = getDebugInfo($date, $pdo);
+                return [
+                    'success' => false, 
+                    'message' => 'Szablon nie istnieje',
+                    'debug' => $debugInfo
+                ];
             }
             $htmlContent = file_get_contents($templatePath);
         }
@@ -80,14 +85,26 @@ function getReportPreview($templateId, $date) {
         $debugInfo = getDebugInfo($date, $pdo);
         $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
 
+        // Dodaj debug info bezpośrednio do preview HTML
+        $debugHtml = '<div style="background: #1e293b; color: #e2e8f0; padding: 15px; margin: 10px 0; border-radius: 8px; border: 2px solid #3b82f6;">
+            <h3 style="color: #60a5fa; margin: 0 0 10px 0;">🔍 DEBUG INFO RAPORTU</h3>
+            <pre style="background: #0f172a; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 12px; color: #94a3b8;">' . 
+            htmlspecialchars(json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) . '</pre>
+        </div>';
+
         return [
             'success' => true, 
-            'preview' => $preview,
+            'preview' => $debugHtml . $preview,
             'debug' => $debugInfo
         ];
 
     } catch (Exception $e) {
-        return ['success' => false, 'message' => 'Błąd przetwarzania szablonu: ' . $e->getMessage()];
+        $debugInfo = getDebugInfo($date, $pdo);
+        return [
+            'success' => false, 
+            'message' => 'Błąd przetwarzania szablonu: ' . $e->getMessage(),
+            'debug' => $debugInfo
+        ];
     }
 }
 
