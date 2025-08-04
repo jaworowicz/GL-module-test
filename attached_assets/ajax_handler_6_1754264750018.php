@@ -1,7 +1,4 @@
-Adding report generation functionality based on templates stored in the /reports/ directory.
-```
 
-```php
 <?php
 require_once '../../includes/auth.php';
 require_once '../../includes/db.php';
@@ -64,8 +61,6 @@ try {
         case 'sort_counters':
             echo json_encode(sortCounters());
             break;
-
-        
 
         default:
             echo json_encode(['success' => false, 'message' => 'Nieznana akcja']);
@@ -589,23 +584,23 @@ function getWorkingDaysInMonth($year, $month) {
 // Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację i pozostałe dni
 function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $month, $sfidId) {
     global $pdo;
-
+    
     // Pobierz dni robocze z tabeli global_working_hours lub oblicz automatycznie
     $workingDaysQuery = "SELECT working_days FROM global_working_hours WHERE sfid_id = ? AND year = ? AND month = ?";
     $stmt = $pdo->prepare($workingDaysQuery);
     $stmt->execute([$sfidId, $year, $month]);
     $workingDaysData = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
     $totalWorkingDays = $workingDaysData['working_days'] ?? getWorkingDaysInMonth($year, $month);
-
+    
     // Oblicz ile dni roboczych już minęło w tym miesiącu (bez niedziel)
     $today = date('j'); // dzień miesiąca
     $currentMonth = date('n'); // miesiąc bieżący
     $currentYear = date('Y'); // rok bieżący
-
+    
     $elapsedWorkingDays = 0;
     $remainingWorkingDays = $totalWorkingDays;
-
+    
     // Jeśli to bieżący miesiąc, oblicz ile dni roboczych już minęło
     if ($year == $currentYear && $month == $currentMonth) {
         for ($day = 1; $day < $today; $day++) {
@@ -614,7 +609,7 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
                 $elapsedWorkingDays++;
             }
         }
-
+        
         // Oblicz pozostałe dni robocze (włącznie z dzisiaj)
         $remainingWorkingDays = 0;
         for ($day = $today; $day <= cal_days_in_month(CAL_GREGORIAN, $month, $year); $day++) {
@@ -624,21 +619,19 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
             }
         }
     }
-
+    
     // Oblicz ile jeszcze trzeba zrealizować
     $remainingGoal = max(0, $totalGoal - $currentRealization);
-
+    
     // Jeśli nie ma pozostałych dni roboczych, zwróć 0
     if ($remainingWorkingDays <= 0) {
         return 0;
     }
-
+    
     // Cel dzienny = pozostały cel / pozostałe dni robocze
     $dynamicDailyGoal = round($remainingGoal / $remainingWorkingDays, 1);
-
+    
     // Minimum 0 (nie może być ujemny)
     return max(0, $dynamicDailyGoal);
 }
-
-
 ?>
