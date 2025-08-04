@@ -76,8 +76,8 @@ function getReportPreview($templateId, $date, $pdo) {
             $htmlContent = file_get_contents($templatePath);
         }
 
-        // Pobierz dane KPI dla podglądu (tylko pierwsze 3 cele)
-        $kpiData = getKpiDataForReport($date, $pdo, 3);
+        // Pobierz WSZYSTKIE dane KPI - nie limituj w podglądzie
+        $kpiData = getKpiDataForReport($date, $pdo);
 
         // Przetwórz szablon
         $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
@@ -133,19 +133,17 @@ function generateReport($templateId, $date, $pdo) {
 
 function getKpiDataForReport($date, $pdo, $limit = null) {
     try {
-        // Kontrola bezpieczeństwa - SFID musi być z sesji
+        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
         $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
             error_log("Brak sfid_id w sesji dla raportu KPI");
             return [];
         }
 
-        // Pobierz cele KPI dla konkretnego SFID użytkownika
-        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
-        if ($limit) {
-            $kpiQuery .= " LIMIT " . (int)$limit;
-        }
-
+        // Pobierz WSZYSTKIE cele KPI dla konkretnego SFID - UŻYWAJ RZECZYWISTYCH ID Z BAZY
+        $kpiQuery = "SELECT id, name, total_goal, sfid_id FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
+        // Usuń LIMIT - pobierz wszystkie KPI aby znaleźć te o rzeczywistych ID z szablonu
+        
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -215,10 +213,10 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     // Usuń nieużywane placeholdery
     $template = preg_replace('/\{KPI_[^}]+\}/', '-', $template);
 
-    // W podglądzie dodaj informację o ograniczeniu
+    // W podglądzie dodaj informację
     if ($isPreview) {
-        $template = '<div style="background: #f59e0b; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-            <strong>PODGLĄD:</strong> Pokazane są tylko pierwsze 3 cele KPI
+        $template = '<div style="background: #16a34a; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+            <strong>PODGLĄD RAPORTU</strong> - dane z modułu KPI
         </div>' . $template;
     }
 

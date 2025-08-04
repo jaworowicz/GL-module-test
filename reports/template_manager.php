@@ -156,22 +156,17 @@ function previewTemplate($htmlContent, $date) {
 
 function getRealKpiDataForPreview($date, $pdo) {
     try {
-        // Pobierz pierwszą aktywną lokalizację (sfid_id) dla aktualnego użytkownika
-        $userId = $_SESSION['user_id']; // Pobierz ID użytkownika z sesji
-
-        $sfidQuery = "SELECT DISTINCT sfid_id FROM licznik_kpi_goals WHERE is_active = 1 AND user_id = ? LIMIT 1";
-        $sfidStmt = $pdo->prepare($sfidQuery);
-        $sfidStmt->execute([$userId]);
-        $sfidId = $sfidStmt->fetchColumn();
-
+        // Pobierz sfid_id z sesji - użytkownik ma już przypisany SFID po zalogowaniu
+        $sfidId = $_SESSION['sfid_id'] ?? null;
         if (!$sfidId) {
-            return []; // Brak danych KPI dla tego użytkownika
+            error_log("Brak sfid_id w sesji dla podglądu KPI");
+            return [];
         }
 
-        // Pobierz cele KPI (maksymalnie 5 do podglądu) dla tego SFID
-        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 AND user_id = ? ORDER BY id ASC LIMIT 5";
+        // Pobierz WSZYSTKIE cele KPI dla konkretnego SFID - UŻYJ RZECZYWISTYCH ID Z BAZY
+        $kpiQuery = "SELECT id, name, total_goal, sfid_id FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
-        $kpiStmt->execute([$sfidId, $userId]);
+        $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $kpiData = [];
