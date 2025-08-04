@@ -1,0 +1,475 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edytor Szablonów Raportów</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #374151;
+            border-radius: 8px;
+        }
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .btn.success {
+            background: #16a34a;
+        }
+        .btn.danger {
+            background: #dc2626;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 150px);
+        }
+        .templates-list {
+            background: #374151;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .template-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #4b5563;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .template-item:hover {
+            background: #6b7280;
+        }
+        .template-item.active {
+            border-color: #2563eb;
+        }
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+            background: #374151;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            background: #1e293b;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            color: #e2e8f0;
+        }
+        .html-editor {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+        }
+        .preview-panel {
+            background: #374151;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .preview-content {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 4px;
+            min-height: 400px;
+        }
+        .placeholders-help {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        .placeholder-item {
+            margin: 2px 0;
+            font-family: monospace;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #374151;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Edytor Szablonów Raportów</h1>
+            <div>
+                <button class="btn" onclick="newTemplate()">Nowy Szablon</button>
+                <button class="btn success" onclick="saveTemplate()">Zapisz</button>
+                <button class="btn" onclick="previewTemplate()">Podgląd</button>
+                <button class="btn danger" onclick="deleteTemplate()">Usuń</button>
+                <button class="btn" onclick="window.close()">Zamknij</button>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <!-- Lista szablonów -->
+            <div class="templates-list">
+                <h3>Szablony</h3>
+                <div id="templates-container">
+                    <!-- Szablony będą ładowane przez JS -->
+                </div>
+            </div>
+
+            <!-- Edytor -->
+            <div class="editor-panel">
+                <div class="form-group">
+                    <label>Nazwa szablonu:</label>
+                    <input type="text" id="template-name" class="form-control" placeholder="Np. Raport dzienny sprzedaży">
+                </div>
+                <div class="form-group">
+                    <label>Opis:</label>
+                    <input type="text" id="template-description" class="form-control" placeholder="Krótki opis szablonu">
+                </div>
+                
+                <div class="placeholders-help">
+                    <strong>Dostępne placeholdery:</strong><br>
+                    <div class="placeholder-item">{REPORT_DATE} - Data raportu</div>
+                    <div class="placeholder-item">{TODAY} - Dzisiejsza data</div>
+                    <div class="placeholder-item">{KPI_NAME=1} - Nazwa celu KPI (ID=1)</div>
+                    <div class="placeholder-item">{KPI_VALUE=1} - Wartość osiągnięta</div>
+                    <div class="placeholder-item">{KPI_TARGET_DAILY=1} - Cel dzienny</div>
+                    <div class="placeholder-item">{KPI_TARGET_MONTHLY=1} - Cel miesięczny</div>
+                </div>
+
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+                    <label>HTML Template:</label>
+                    <textarea id="html-editor" class="form-control html-editor" placeholder="Wpisz swój kod HTML..."></textarea>
+                </div>
+            </div>
+
+            <!-- Podgląd -->
+            <div class="preview-panel">
+                <h3>Podgląd na żywo</h3>
+                <div class="preview-content" id="preview-content">
+                    <p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal nowego szablonu -->
+    <div id="new-template-modal" class="modal">
+        <div class="modal-content">
+            <h2>Nowy Szablon</h2>
+            <div class="form-group">
+                <label>Nazwa:</label>
+                <input type="text" id="new-template-name" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Opis:</label>
+                <input type="text" id="new-template-description" class="form-control">
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn" onclick="closeModal()">Anuluj</button>
+                <button class="btn success" onclick="createTemplate()">Utwórz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTemplateId = null;
+        let templates = [];
+
+        // Załaduj szablony przy starcie
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTemplates();
+            
+            // Auto-podgląd przy pisaniu
+            document.getElementById('html-editor').addEventListener('input', debounce(previewTemplate, 500));
+        });
+
+        async function loadTemplates() {
+            try {
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=get_templates'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    templates = data.templates;
+                    renderTemplatesList();
+                }
+            } catch (error) {
+                console.error('Błąd ładowania szablonów:', error);
+            }
+        }
+
+        function renderTemplatesList() {
+            const container = document.getElementById('templates-container');
+            container.innerHTML = '';
+            
+            templates.forEach(template => {
+                const item = document.createElement('div');
+                item.className = `template-item ${currentTemplateId === template.id ? 'active' : ''}`;
+                item.innerHTML = `
+                    <strong>${template.name}</strong><br>
+                    <small style="color: #9ca3af;">${template.description}</small>
+                `;
+                item.onclick = () => loadTemplate(template.id);
+                container.appendChild(item);
+            });
+        }
+
+        async function loadTemplate(templateId) {
+            try {
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=get_template&template_id=${templateId}`
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    currentTemplateId = templateId;
+                    document.getElementById('template-name').value = data.template.name;
+                    document.getElementById('template-description').value = data.template.description || '';
+                    document.getElementById('html-editor').value = data.template.html_content;
+                    
+                    renderTemplatesList();
+                    previewTemplate();
+                }
+            } catch (error) {
+                console.error('Błąd ładowania szablonu:', error);
+            }
+        }
+
+        async function saveTemplate() {
+            const name = document.getElementById('template-name').value.trim();
+            const description = document.getElementById('template-description').value.trim();
+            const htmlContent = document.getElementById('html-editor').value;
+            
+            if (!name) {
+                alert('Nazwa szablonu jest wymagana!');
+                return;
+            }
+            
+            try {
+                const params = new URLSearchParams({
+                    action: 'save_template',
+                    template_id: currentTemplateId || '',
+                    name: name,
+                    description: description,
+                    html_content: htmlContent
+                });
+                
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    currentTemplateId = data.template_id;
+                    alert('Szablon zapisany pomyślnie!');
+                    loadTemplates();
+                } else {
+                    alert('Błąd zapisu: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Błąd zapisu:', error);
+                alert('Błąd połączenia z serwerem');
+            }
+        }
+
+        async function deleteTemplate() {
+            if (!currentTemplateId) {
+                alert('Wybierz szablon do usunięcia');
+                return;
+            }
+            
+            if (!confirm('Czy na pewno chcesz usunąć ten szablon?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=delete_template&template_id=${currentTemplateId}`
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Szablon usunięty!');
+                    currentTemplateId = null;
+                    document.getElementById('template-name').value = '';
+                    document.getElementById('template-description').value = '';
+                    document.getElementById('html-editor').value = '';
+                    document.getElementById('preview-content').innerHTML = '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>';
+                    loadTemplates();
+                } else {
+                    alert('Błąd usuwania: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Błąd usuwania:', error);
+            }
+        }
+
+        async function previewTemplate() {
+            const htmlContent = document.getElementById('html-editor').value;
+            if (!htmlContent.trim()) {
+                document.getElementById('preview-content').innerHTML = '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>';
+                return;
+            }
+            
+            try {
+                const params = new URLSearchParams({
+                    action: 'preview_template',
+                    html_content: htmlContent,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                
+                const response = await fetch('template_manager.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('preview-content').innerHTML = data.preview;
+                }
+            } catch (error) {
+                console.error('Błąd podglądu:', error);
+            }
+        }
+
+        function newTemplate() {
+            document.getElementById('new-template-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('new-template-modal').style.display = 'none';
+        }
+
+        function createTemplate() {
+            const name = document.getElementById('new-template-name').value.trim();
+            const description = document.getElementById('new-template-description').value.trim();
+            
+            if (!name) {
+                alert('Nazwa jest wymagana!');
+                return;
+            }
+            
+            currentTemplateId = null;
+            document.getElementById('template-name').value = name;
+            document.getElementById('template-description').value = description;
+            document.getElementById('html-editor').value = `<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raport - {REPORT_DATE}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .content { max-width: 800px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="header">
+            <h1>Raport z dnia {REPORT_DATE}</h1>
+        </div>
+        
+        <table>
+            <tr>
+                <th>Cel</th>
+                <th>Osiągnięcie</th>
+                <th>Cel dzienny</th>
+            </tr>
+            <tr>
+                <td>{KPI_NAME=1}</td>
+                <td>{KPI_VALUE=1}</td>
+                <td>{KPI_TARGET_DAILY=1}</td>
+            </tr>
+            <tr>
+                <td>{KPI_NAME=2}</td>
+                <td>{KPI_VALUE=2}</td>
+                <td>{KPI_TARGET_DAILY=2}</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>`;
+            
+            closeModal();
+            previewTemplate();
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+    </script>
+</body>
+</html>

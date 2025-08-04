@@ -3,19 +3,15 @@
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 
-// Sprawdź czy użytkownik jest zalogowany
 auth_require_login();
-
-// Ustaw nagłówki JSON
 header('Content-Type: application/json');
 
-// Pobierz akcję
 $action = $_POST['action'] ?? '';
 
 try {
     switch ($action) {
         case 'get_report_templates':
-            echo json_encode(getReportTemplates());
+            echo json_encode(getCustomTemplates());
             break;
 
         case 'get_report_preview':
@@ -33,37 +29,66 @@ try {
     echo json_encode(['success' => false, 'message' => 'Błąd serwera: ' . $e->getMessage()]);
 }
 
-// === FUNKCJE RAPORTÓW ===
-
-function getReportTemplates() {
-    // Używamy tylko jednego domyślnego szablonu
-    $templates = [
-        [
+function getCustomTemplates() {
+    $templatesDir = __DIR__ . '/templates/';
+    if (!is_dir($templatesDir)) {
+        mkdir($templatesDir, 0755, true);
+    }
+    
+    $templates = [];
+    $files = glob($templatesDir . '*.json');
+    
+    foreach ($files as $file) {
+        $data = json_decode(file_get_contents($file), true);
+        if ($data) {
+            $templates[] = [
+                'filename' => $data['id'],
+                'name' => $data['name']
+            ];
+        }
+    }
+    
+    // Dodaj domyślny szablon jeśli brak niestandardowych
+    if (empty($templates)) {
+        $templates[] = [
             'filename' => 'default.php',
-            'name' => 'Raport Dzienny KPI'
-        ]
-    ];
-
+            'name' => 'Domyślny raport KPI'
+        ];
+    }
+    
     return ['success' => true, 'templates' => $templates];
 }
 
-function getReportPreview($templateName, $date, $pdo) {
+function getReportPreview($templateId, $date, $pdo) {
     try {
-        $templatePath = __DIR__ . '/' . $templateName;
-
-        if (!file_exists($templatePath)) {
-            return ['success' => false, 'message' => 'Szablon nie istnieje'];
+        // Sprawdź czy to niestandardowy szablon
+        $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
+        
+        if (file_exists($customTemplateFile)) {
+            // Niestandardowy szablon
+            $templateData = json_decode(file_get_contents($customTemplateFile), true);
+            $htmlContent = $templateData['html_content'];
+        } else {
+            // Domyślny szablon
+            $templatePath = __DIR__ . '/default.php';
+            if (!file_exists($templatePath)) {
+                return ['success' => false, 'message' => 'Szablon nie istnieje'];
+            }
+            $htmlContent = file_get_contents($templatePath);
         }
-
-        $templateContent = file_get_contents($templatePath);
 
         // Pobierz dane KPI dla podglądu (tylko pierwsze 3 cele)
         $kpiData = getKpiDataForReport($date, $pdo, 3);
 
-        // Zastąp placeholdery podglądem
-        $preview = processReportTemplate($templateContent, $kpiData, $date, true);
+        // Przetwórz szablon
+        $preview = processReportTemplate($htmlContent, $kpiData, $date, true);
 
-        // Usuń HTML i zwróć tylko tabelę
+        // Dla niestandardowych szablonów nie usuwaj HTML
+        if (file_exists($customTemplateFile)) {
+            return ['success' => true, 'preview' => $preview];
+        }
+
+        // Dla domyślnego szablonu usuń HTML i zwróć tylko tabelę
         $preview = preg_replace('/<html.*?<body[^>]*>/s', '', $preview);
         $preview = preg_replace('/<\/body>.*?<\/html>/s', '', $preview);
         $preview = preg_replace('/<head>.*?<\/head>/s', '', $preview);
@@ -76,21 +101,29 @@ function getReportPreview($templateName, $date, $pdo) {
     }
 }
 
-function generateReport($templateName, $date, $pdo) {
+function generateReport($templateId, $date, $pdo) {
     try {
-        $templatePath = __DIR__ . '/' . $templateName;
-
-        if (!file_exists($templatePath)) {
-            return ['success' => false, 'message' => 'Szablon nie istnieje'];
+        // Sprawdź czy to niestandardowy szablon
+        $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
+        
+        if (file_exists($customTemplateFile)) {
+            // Niestandardowy szablon
+            $templateData = json_decode(file_get_contents($customTemplateFile), true);
+            $htmlContent = $templateData['html_content'];
+        } else {
+            // Domyślny szablon
+            $templatePath = __DIR__ . '/default.php';
+            if (!file_exists($templatePath)) {
+                return ['success' => false, 'message' => 'Szablon nie istnieje'];
+            }
+            $htmlContent = file_get_contents($templatePath);
         }
-
-        $templateContent = file_get_contents($templatePath);
 
         // Pobierz wszystkie dane KPI
         $kpiData = getKpiDataForReport($date, $pdo);
 
         // Przetwórz szablon
-        $reportHtml = processReportTemplate($templateContent, $kpiData, $date, false);
+        $reportHtml = processReportTemplate($htmlContent, $kpiData, $date, false);
 
         return ['success' => true, 'html' => $reportHtml];
 
@@ -165,6 +198,7 @@ function getKpiDataForReport($date, $pdo, $limit = null) {
 function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     // Zastąp datę raportu
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
+    $template = str_replace('{TODAY}', date('d.m.Y'), $template);
 
     // Zastąp placeholdery KPI
     foreach ($kpiData as $kpiId => $data) {

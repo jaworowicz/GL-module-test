@@ -21,6 +21,20 @@ function openQuickReportModal() {
     }
 }
 
+// Otwórz edytor szablonów
+function openTemplateEditor() {
+    // Otwórz edytor w nowym oknie
+    const editorWindow = window.open('reports/template_editor.html', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+    
+    if (!editorWindow) {
+        if (typeof showNotification === 'function') {
+            showNotification('Nie można otworzyć edytora - sprawdź blokowanie wyskakujących okien', 'error');
+        } else {
+            alert('Nie można otworzyć edytora - sprawdź blokowanie wyskakujących okien');
+        }
+    }
+}
+
 // Załaduj dostępne szablony (tylko domyślny)
 async function loadReportTemplates() {
     try {
