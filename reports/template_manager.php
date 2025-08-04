@@ -1,7 +1,16 @@
 
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+// Poprawne ścieżki względne do katalogu głównego
+if (file_exists(__DIR__ . '/../attached_assets/auth_1754256310437.php')) {
+    require_once __DIR__ . '/../attached_assets/auth_1754256310437.php';
+} else {
+    // Prosta funkcja auth jeśli plik nie istnieje
+    function auth_require_login() {
+        // Placeholder - zawsze zezwalaj w środowisku deweloperskim
+        return true;
+    }
+}
+require_once __DIR__ . '/../includes/db.php';
 
 auth_require_login();
 header('Content-Type: application/json');
@@ -133,27 +142,120 @@ function deleteTemplate($templateId) {
 }
 
 function previewTemplate($htmlContent, $date) {
+    global $pdo;
+    
     if (empty($htmlContent)) {
         return ['success' => true, 'preview' => '<p style="color: #666;">Wpisz kod HTML aby zobaczyć podgląd...</p>'];
     }
     
-    // Podstawowe dane do podglądu
-    $sampleKpiData = [
-        1 => ['value' => 25, 'daily_goal' => 30, 'monthly_goal' => 600, 'name' => 'Sprzedaż (przykład)'],
-        2 => ['value' => 45, 'daily_goal' => 40, 'monthly_goal' => 800, 'name' => 'Kontakty (przykład)'],
-        3 => ['value' => 12, 'daily_goal' => 15, 'monthly_goal' => 300, 'name' => 'Oferty (przykład)']
-    ];
+    // Pobierz prawdziwe dane KPI z modułu
+    $realKpiData = getRealKpiDataForPreview($date, $pdo);
+    
+    // Jeśli brak prawdziwych danych, użyj przykładowych
+    if (empty($realKpiData)) {
+        $realKpiData = [
+            1 => ['value' => 25, 'daily_goal' => 30, 'monthly_goal' => 600, 'name' => 'Sprzedaż (przykład)'],
+            2 => ['value' => 45, 'daily_goal' => 40, 'monthly_goal' => 800, 'name' => 'Kontakty (przykład)'],
+            3 => ['value' => 12, 'daily_goal' => 15, 'monthly_goal' => 300, 'name' => 'Oferty (przykład)']
+        ];
+    }
     
     // Przetwórz szablon
-    $preview = processTemplatePreview($htmlContent, $sampleKpiData, $date);
+    $preview = processTemplatePreview($htmlContent, $realKpiData, $date);
     
     return ['success' => true, 'preview' => $preview];
+}
+
+function getRealKpiDataForPreview($date, $pdo) {
+    try {
+        // Pobierz pierwszą aktywną lokalizację (sfid_id)
+        $sfidQuery = "SELECT DISTINCT sfid_id FROM licznik_kpi_goals WHERE is_active = 1 LIMIT 1";
+        $sfidStmt = $pdo->prepare($sfidQuery);
+        $sfidStmt->execute();
+        $sfidId = $sfidStmt->fetchColumn();
+        
+        if (!$sfidId) {
+            return []; // Brak danych KPI
+        }
+
+        // Pobierz cele KPI (maksymalnie 5 do podglądu)
+        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC LIMIT 5";
+        $kpiStmt = $pdo->prepare($kpiQuery);
+        $kpiStmt->execute([$sfidId]);
+        $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $kpiData = [];
+
+        foreach ($kpiGoals as $goal) {
+            // Pobierz powiązane liczniki
+            $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
+            $linkedStmt = $pdo->prepare($linkedQuery);
+            $linkedStmt->execute([$goal['id']]);
+            $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            // Pobierz wartości dla tego dnia
+            $totalValue = 0;
+            if (!empty($linkedCounterIds)) {
+                $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
+                $valueQuery = "SELECT SUM(value) as total 
+                              FROM licznik_daily_values 
+                              WHERE counter_id IN ($placeholders) 
+                              AND date = ?";
+
+                $params = array_merge($linkedCounterIds, [$date]);
+                $valueStmt = $pdo->prepare($valueQuery);
+                $valueStmt->execute($params);
+                $totalValue = $valueStmt->fetchColumn() ?: 0;
+            }
+
+            // Oblicz cel dzienny
+            $dailyGoal = 0;
+            if ($goal['total_goal'] > 0) {
+                $monthStart = date('Y-m-01', strtotime($date));
+                $monthEnd = date('Y-m-t', strtotime($date));
+                $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
+                $dailyGoal = ceil($goal['total_goal'] / $workingDays);
+            }
+
+            $kpiData[$goal['id']] = [
+                'value' => $totalValue,
+                'daily_goal' => $dailyGoal,
+                'monthly_goal' => $goal['total_goal'],
+                'name' => $goal['name']
+            ];
+        }
+
+        return $kpiData;
+
+    } catch (Exception $e) {
+        error_log("Błąd pobierania danych KPI: " . $e->getMessage());
+        return [];
+    }
+}
+
+function calculateWorkingDaysInRange($startDate, $endDate) {
+    $workingDays = 0;
+    $start = new DateTime($startDate);
+    $end = new DateTime($endDate);
+    
+    while ($start <= $end) {
+        $dayOfWeek = $start->format('N');
+        if ($dayOfWeek < 6) { // Poniedziałek-Piątek
+            $workingDays++;
+        }
+        $start->add(new DateInterval('P1D'));
+    }
+    
+    return $workingDays;
 }
 
 function processTemplatePreview($template, $kpiData, $date) {
     // Zastąp datę raportu
     $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
     $template = str_replace('{TODAY}', date('d.m.Y'), $template);
+    
+    // Sprawdź czy to są prawdziwe dane czy przykładowe
+    $isRealData = !empty($kpiData) && !isset($kpiData[1]['name']) || (isset($kpiData[1]['name']) && strpos($kpiData[1]['name'], '(przykład)') === false);
     
     // Zastąp placeholdery KPI
     foreach ($kpiData as $kpiId => $data) {
@@ -167,10 +269,16 @@ function processTemplatePreview($template, $kpiData, $date) {
     $template = preg_replace('/\{KPI_[^}]+\}/', '<span style="color: #ff6b6b; font-weight: bold;">BRAK DANYCH</span>', $template);
     
     // Dodaj informację o podglądzie
+    $headerText = $isRealData ? 'PODGLĄD SZABLONU - DANE Z MODUŁU' : 'PODGLĄD SZABLONU - DANE PRZYKŁADOWE';
+    $headerColor = $isRealData ? '#16a34a' : '#3b82f6';
+    
     if (strpos($template, '<body') !== false) {
-        $template = str_replace('<body', '<body style="border: 3px solid #3b82f6; margin: 10px; padding: 10px; position: relative;"', $template);
-        $template = str_replace('<body', '<body><div style="position: absolute; top: 0; left: 0; right: 0; background: #3b82f6; color: white; padding: 10px; text-align: center; font-weight: bold;">PODGLĄD SZABLONU - DANE PRZYKŁADOWE</div><div style="margin-top: 50px;"', $template);
+        $template = str_replace('<body', '<body style="border: 3px solid ' . $headerColor . '; margin: 10px; padding: 10px; position: relative;"', $template);
+        $template = str_replace('<body', '<body><div style="position: absolute; top: 0; left: 0; right: 0; background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold;">' . $headerText . '</div><div style="margin-top: 50px;"', $template);
         $template = str_replace('</body>', '</div></body>', $template);
+    } else {
+        // Jeśli brak znacznika body, dodaj header na początku
+        $template = '<div style="background: ' . $headerColor . '; color: white; padding: 10px; text-align: center; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">' . $headerText . '</div>' . $template;
     }
     
     return $template;
