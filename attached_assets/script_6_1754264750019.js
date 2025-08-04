@@ -755,53 +755,6 @@ async function deleteKpiGoal(goalId) {
 
 // === FUNKCJE KATEGORII ===
 
-// Otwórz modal dodawania kategorii
-function openAddCategoryModal() {
-    const modal = document.getElementById('add-category-modal');
-    if (!modal) return;
-
-    // Wyczyść formularz
-    document.getElementById('new-category-name').value = '';
-    showModal(modal);
-}
-
-// Dodaj nową kategorię
-async function addNewCategory() {
-    const name = document.getElementById('new-category-name').value.trim();
-
-    if (!name) {
-        showNotification('Nazwa kategorii jest wymagana', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('ajax_handler.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'save_category',
-                name: name
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showNotification('Kategoria dodana pomyślnie', 'success');
-            closeAllModals();
-            // Odśwież stronę aby załadować nowe kategorie
-            window.location.reload();
-        } else {
-            showNotification('Błąd dodawania kategorii: ' + data.message, 'error');
-        }
-    } catch (error) {
-        console.error('Błąd AJAX:', error);
-        showNotification('Błąd połączenia z serwerem', 'error');
-    }
-}
-
 // Wypełnij dropdown kategorii
 function populateCategoryDropdown() {
     const menu = document.getElementById('category-menu');
@@ -904,34 +857,21 @@ function changeView(view) {
     if (view === 'list') {
         container.classList.remove('grid-view');
         container.classList.add('list-view');
-        grid.className = 'space-y-3';
-        // Dodaj style dla widoku listy
-        grid.style.display = 'flex';
-        grid.style.flexDirection = 'column';
+        grid.className = 'space-y-2';
     } else {
         container.classList.remove('list-view');
         container.classList.add('grid-view');
         grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
-        // Usuń style inline dla widoku siatki
-        grid.style.display = '';
-        grid.style.flexDirection = '';
     }
 
     // Aktualizuj przyciski
-    const gridBtn = document.getElementById('grid-view-btn');
-    const listBtn = document.getElementById('list-view-btn');
-    
-    if (view === 'grid') {
-        gridBtn.classList.add('bg-gray-500', 'text-white');
-        gridBtn.classList.remove('text-gray-300');
-        listBtn.classList.remove('bg-gray-500', 'text-white');
-        listBtn.classList.add('text-gray-300');
-    } else {
-        listBtn.classList.add('bg-gray-500', 'text-white');
-        listBtn.classList.remove('text-gray-300');
-        gridBtn.classList.remove('bg-gray-500', 'text-white');
-        gridBtn.classList.add('text-gray-300');
-    }
+    document.getElementById('grid-view-btn').classList.toggle('bg-gray-500', view === 'grid');
+    document.getElementById('grid-view-btn').classList.toggle('text-white', view === 'grid');
+    document.getElementById('grid-view-btn').classList.toggle('text-gray-300', view !== 'grid');
+
+    document.getElementById('list-view-btn').classList.toggle('bg-gray-500', view === 'list');
+    document.getElementById('list-view-btn').classList.toggle('text-white', view === 'list');
+    document.getElementById('list-view-btn').classList.toggle('text-gray-300', view !== 'list');
 
     renderCounters();
 }
