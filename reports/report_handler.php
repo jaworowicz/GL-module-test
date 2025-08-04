@@ -36,38 +36,15 @@ try {
 // === FUNKCJE RAPORTÓW ===
 
 function getReportTemplates() {
-    try {
-        $templatesDir = __DIR__ . '/';
-        $templates = [];
+    // Używamy tylko jednego domyślnego szablonu
+    $templates = [
+        [
+            'filename' => 'default.php',
+            'name' => 'Raport Dzienny KPI'
+        ]
+    ];
 
-        if (is_dir($templatesDir)) {
-            $files = scandir($templatesDir);
-            foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'php' && 
-                    $file !== 'report_handler.php' && 
-                    !strpos($file, 'report_scripts')) {
-                    $name = pathinfo($file, PATHINFO_FILENAME);
-                    $displayName = $name === 'default' ? 'Raport Dzienny' : 
-                                  ucfirst(str_replace('_', ' ', $name)) . ' Report';
-                    $templates[] = [
-                        'filename' => $file,
-                        'name' => $displayName
-                    ];
-                }
-            }
-        }
-
-        if (empty($templates)) {
-            $templates[] = [
-                'filename' => 'default.php',
-                'name' => 'Raport Dzienny'
-            ];
-        }
-
-        return ['success' => true, 'templates' => $templates];
-    } catch (Exception $e) {
-        return ['success' => false, 'message' => 'Błąd ładowania szablonów: ' . $e->getMessage()];
-    }
+    return ['success' => true, 'templates' => $templates];
 }
 
 function getReportPreview($templateName, $date, $pdo) {

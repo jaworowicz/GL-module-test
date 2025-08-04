@@ -100,7 +100,92 @@
             .report-header { 
                 padding: 10px; 
             }
-            .report-header h1 { 
+            .report-header h1 {
+                font-size: 1.2rem;
+                margin: 0;
+            }
+            .report-table {
+                font-size: 11px;
+            }
+            .report-table th, .report-table td {
+                padding: 6px 2px;
+            }
+        }
+        
+        /* Dodatkowe style dla podglądu */
+        .preview-notice {
+            background: #f59e0b;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="report-header">
+            <h1>📊 Raport KPI - {REPORT_DATE}</h1>
+            <p>Dzienny przegląd celów i osiągnięć</p>
+        </div>
+        
+        <div class="report-content">
+            <table class="report-table">
+                <thead>
+                    <tr class="section-header">
+                        <th colspan="4">Cele KPI na dzień {REPORT_DATE}</th>
+                    </tr>
+                    <tr>
+                        <th>Nazwa celu</th>
+                        <th>Osiągnięcie</th>
+                        <th>Cel dzienny</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{KPI_NAME=1}</td>
+                        <td class="value-good">{KPI_VALUE=1}</td>
+                        <td>{KPI_TARGET_DAILY=1}</td>
+                        <td class="value-good">✓</td>
+                    </tr>
+                    <tr>
+                        <td>{KPI_NAME=2}</td>
+                        <td class="value-neutral">{KPI_VALUE=2}</td>
+                        <td>{KPI_TARGET_DAILY=2}</td>
+                        <td class="value-neutral">○</td>
+                    </tr>
+                    <tr>
+                        <td>{KPI_NAME=3}</td>
+                        <td class="value-warning">{KPI_VALUE=3}</td>
+                        <td>{KPI_TARGET_DAILY=3}</td>
+                        <td class="value-warning">!</td>
+                    </tr>
+                    <tr>
+                        <td>{KPI_NAME=4}</td>
+                        <td class="value-good">{KPI_VALUE=4}</td>
+                        <td>{KPI_TARGET_DAILY=4}</td>
+                        <td class="value-good">✓</td>
+                    </tr>
+                    <tr>
+                        <td>{KPI_NAME=5}</td>
+                        <td class="value-neutral">{KPI_VALUE=5}</td>
+                        <td>{KPI_TARGET_DAILY=5}</td>
+                        <td class="value-neutral">○</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                <h3 style="margin: 0 0 10px 0; color: #374151;">📈 Podsumowanie</h3>
+                <p style="margin: 5px 0; color: #6b7280;">Raport wygenerowany automatycznie na podstawie danych z systemu liczników KPI.</p>
+                <p style="margin: 5px 0; color: #6b7280;">Data generowania: <?php echo date('d.m.Y H:i'); ?></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
                 font-size: 1.1rem; 
                 margin: 0 0 5px 0;
             }

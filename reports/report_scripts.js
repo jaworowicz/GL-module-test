@@ -21,40 +21,21 @@ function openQuickReportModal() {
     }
 }
 
-// Załaduj dostępne szablony
+// Załaduj dostępne szablony (tylko domyślny)
 async function loadReportTemplates() {
     try {
-        const response = await fetch('reports/report_handler.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                action: 'get_report_templates'
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            const select = document.getElementById('report-template');
-            select.innerHTML = '';
-
-            data.templates.forEach(template => {
-                const option = document.createElement('option');
-                option.value = template.filename;
-                option.textContent = template.name;
-                select.appendChild(option);
-            });
-
-            // Załaduj podgląd pierwszego szablonu
-            if (data.templates.length > 0) {
-                loadReportPreview(data.templates[0].filename);
-            }
-        }
+        // Ustaw domyślny szablon
+        const select = document.getElementById('report-template');
+        select.innerHTML = '<option value="default.php">Raport Dzienny KPI</option>';
+        
+        // Załaduj podgląd domyślnego szablonu
+        loadReportPreview('default.php');
+        
     } catch (error) {
         console.error('Błąd ładowania szablonów:', error);
-        showNotification('Błąd ładowania szablonów raportu', 'error');
+        if (typeof showNotification === 'function') {
+            showNotification('Błąd ładowania szablonów raportu', 'error');
+        }
     }
 }
 
