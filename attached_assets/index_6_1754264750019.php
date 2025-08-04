@@ -369,12 +369,12 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                 <h2 class="text-2xl font-bold text-white">Cele Zespołowe (KPI)</h2>
                 <div class="flex items-center gap-2">
                     <input type="month" id="kpi-month-selector" class="custom-input text-sm" value="<?php echo $current_month; ?>">
+                    <button onclick="openQuickReportModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <i class="fas fa-file-alt mr-2"></i> Raport KPI
+                    </button>
                     <?php if ($is_admin): ?>
                     <button onclick="openMassCorrectionModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
                         <i class="fas fa-database mr-2"></i> Korekta Masowa
-                    </button>
-                    <button onclick="openQuickReportModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
-                        <i class="fas fa-file-alt mr-2"></i> Szybki Raport
                     </button>
                     <button onclick="openAddKpiModal()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
                         <i class="fas fa-plus mr-2"></i> Dodaj Cel
@@ -709,5 +709,6 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
 </script>
 
 <script src="script.js"></script>
+<script src="reports/report_scripts.js"></script>
 
 <?php require_once '../../includes/footer-new.php'; ?>
