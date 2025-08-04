@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 require_once '../../../includes/auth.php';
@@ -61,7 +60,7 @@ function getCustomTemplates() {
 
 function getReportPreview($templateId, $date) {
     global $pdo;
-    
+
     try {
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
@@ -110,7 +109,7 @@ function getReportPreview($templateId, $date) {
 
 function generateReport($templateId, $date) {
     global $pdo;
-    
+
     try {
         $customTemplateFile = __DIR__ . '/templates/' . $templateId . '.json';
 
@@ -158,7 +157,7 @@ function getKpiDataForReport($date, $pdo) {
 
         foreach ($kpiGoals as $goal) {
             // DEBUG: Przetwarzam KPI ID=" . $goal['id'] . " (" . $goal['name'] . ")
-            
+
             // Pobierz powiązane liczniki
             $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
             $linkedStmt = $pdo->prepare($linkedQuery);
@@ -169,12 +168,12 @@ function getKpiDataForReport($date, $pdo) {
 
             $dailyValue = 0;
             $monthlyRealization = 0;
-            
+
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
-                
+
                 // Pobierz liczniki zespołowe dla tej lokalizacji
-                $teamQuery = "SELECT DISTINCT lc.id, lc.name, u.name as user_name
+                $teamQuery = "SELECT lc.id, lc.name, u.name as user_name
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
                              WHERE u.sfid_id = ? 
@@ -186,12 +185,12 @@ function getKpiDataForReport($date, $pdo) {
                 $teamStmt->execute($teamParams);
                 $teamCounters = $teamStmt->fetchAll(PDO::FETCH_ASSOC);
                 $teamCounterIds = array_column($teamCounters, 'id');
-                
+
                 // DEBUG: Zespołowe liczniki dla KPI " . $goal['id'] . ": count = " . count($teamCounters)
 
                 if (!empty($teamCounterIds)) {
                     $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
-                    
+
                     // Wartość za dany dzień
                     $dailyQuery = "SELECT counter_id, value, date FROM licznik_daily_values 
                                   WHERE counter_id IN ($teamPlaceholders) 
@@ -201,7 +200,7 @@ function getKpiDataForReport($date, $pdo) {
                     $dailyStmt->execute($dailyParams);
                     $dailyValues = $dailyStmt->fetchAll(PDO::FETCH_ASSOC);
                     $dailyValue = array_sum(array_column($dailyValues, 'value'));
-                    
+
                     // DEBUG: Wartości dzienne dla daty $date: count = " . count($dailyValues) . ", suma = $dailyValue
 
                     // REALIZACJA MIESIĘCZNA (potrzebna do dynamicznego celu dziennego)
@@ -215,7 +214,7 @@ function getKpiDataForReport($date, $pdo) {
                     $monthlyStmt->execute($monthlyParams);
                     $monthlyValues = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
                     $monthlyRealization = array_sum(array_column($monthlyValues, 'total'));
-                    
+
                     // DEBUG: Realizacja miesięczna ($year-$month): suma = $monthlyRealization
                 }
             }
@@ -254,7 +253,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     // Najpierw pobierz WSZYSTKIE dostępne KPI z bazy danych dla tej lokalizacji
     global $pdo;
     $sfidId = $_SESSION['sfid_id'] ?? null;
-    
+
     if ($sfidId) {
         $allKpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $allKpiStmt = $pdo->prepare($allKpiQuery);
@@ -264,7 +263,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
         // Zastąp placeholdery dla WSZYSTKICH KPI (również tych bez danych)
         foreach ($allKpiGoals as $kpi) {
             $kpiId = $kpi['id'];
-            
+
             // Jeśli mamy dane dla tego KPI, użyj ich
             if (isset($kpiData[$kpiId])) {
                 $data = $kpiData[$kpiId];
@@ -274,7 +273,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
             } else {
                 // Jeśli nie ma danych, wstaw wartości domyślne (0 lub puste)
                 $template = str_replace('{KPI_VALUE=' . $kpiId . '}', '0', $template);
-                
+
                 // Oblicz cel dzienny na podstawie celu miesięcznego
                 $dailyGoal = 0;
                 if ($kpi['total_goal'] > 0) {
@@ -283,11 +282,11 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
                     $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
                     $dailyGoal = ceil($kpi['total_goal'] / $workingDays);
                 }
-                
+
                 $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $dailyGoal, $template);
                 $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $kpi['total_goal'], $template);
             }
-            
+
             // ZAWSZE zastąp nazwę KPI (etykieta powinna być zawsze widoczna)
             $template = str_replace('{KPI_NAME=' . $kpiId . '}', htmlspecialchars($kpi['name']), $template);
         }
@@ -299,7 +298,7 @@ function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
     if ($isPreview) {
         $dataInfo = !empty($kpiData) ? 'RZECZYWISTE DANE' : 'BRAK DANYCH - POKAZANO WARTOŚCI ZEROWE';
         $headerColor = !empty($kpiData) ? '#16a34a' : '#f59e0b';
-        
+
         $template = '<div style="background: ' . $headerColor . '; color: white; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
             <strong>PODGLĄD RAPORTU ZESPOŁOWEGO</strong> - ' . $dataInfo . ' za dzień: ' . date('d.m.Y', strtotime($date)) . '
         </div>' . $template;
@@ -327,21 +326,21 @@ function calculateWorkingDaysInRange($startDate, $endDate) {
 // Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację i pozostałe dni
 function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $month, $sfidId) {
     global $pdo;
-    
+
     // Pobierz dni robocze z tabeli lub oblicz automatycznie
     $workingDaysQuery = "SELECT working_days FROM global_working_hours WHERE sfid_id = ? AND year = ? AND month = ?";
     $stmt = $pdo->prepare($workingDaysQuery);
     $stmt->execute([$sfidId, $year, $month]);
     $workingDaysData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     $totalWorkingDays = $workingDaysData['working_days'] ?? getWorkingDaysInMonth($year, $month);
-    
+
     $today = date('j');
     $currentMonth = date('n');
     $currentYear = date('Y');
-    
+
     $remainingWorkingDays = $totalWorkingDays;
-    
+
     // Jeśli to bieżący miesiąc, oblicz pozostałe dni robocze
     if ($year == $currentYear && $month == $currentMonth) {
         $remainingWorkingDays = 0;
@@ -352,14 +351,14 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
             }
         }
     }
-    
+
     // Oblicz ile jeszcze trzeba zrealizować
     $remainingGoal = max(0, $totalGoal - $currentRealization);
-    
+
     if ($remainingWorkingDays <= 0) {
         return 0;
     }
-    
+
     // Cel dzienny = pozostały cel / pozostałe dni robocze
     return round($remainingGoal / $remainingWorkingDays);
 }
@@ -367,80 +366,79 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
 function getWorkingDaysInMonth($year, $month) {
     $workingDays = 0;
     $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-    
+
     for ($day = 1; $day <= $daysInMonth; $day++) {
         $dayOfWeek = date('N', mktime(0, 0, 0, $month, $day, $year));
         if ($dayOfWeek < 6) {
             $workingDays++;
         }
     }
-    
+
     return $workingDays;
 }
 
 function getDebugInfo($date, $pdo) {
     $debug = [];
     $sfidId = $_SESSION['sfid_id'] ?? null;
-    
+
     $debug['session_sfid'] = $sfidId;
     $debug['report_date'] = $date;
     $debug['current_time'] = date('Y-m-d H:i:s');
-    
+
     if (!$sfidId) {
         $debug['error'] = 'Brak sfid_id w sesji - użytkownik nie jest przypisany do lokalizacji';
         return $debug;
     }
-    
+
     try {
         // Sprawdź cele KPI dla lokalizacji
         $kpiQuery = "SELECT id, name, total_goal FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
         $kpiStmt = $pdo->prepare($kpiQuery);
         $kpiStmt->execute([$sfidId]);
         $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $debug['kpi_goals_count'] = count($kpiGoals);
         $debug['kpi_goals'] = [];
-        
+
         foreach ($kpiGoals as $goal) {
             $kpiInfo = [
                 'id' => $goal['id'],
                 'name' => $goal['name'],
                 'monthly_goal' => $goal['total_goal']
             ];
-            
+
             // Sprawdź powiązane liczniki
             $linkedQuery = "SELECT counter_id FROM licznik_kpi_linked_counters WHERE kpi_goal_id = ?";
             $linkedStmt = $pdo->prepare($linkedQuery);
             $linkedStmt->execute([$goal['id']]);
             $linkedCounterIds = $linkedStmt->fetchAll(PDO::FETCH_COLUMN);
-            
+
             $kpiInfo['linked_counters_count'] = count($linkedCounterIds);
             $kpiInfo['linked_counter_ids'] = $linkedCounterIds;
-            
+
             if (!empty($linkedCounterIds)) {
                 $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
-                
-                // Sprawdź liczniki zespołowe
-                $teamQuery = "SELECT lc.id, lc.name, u.name as user_name, u.sfid_id
+
+                // Sprawdź liczniki zespołowe dla lokalizacji
+                $teamQuery = "SELECT lc.id, lc.title, lc.sfid_id
                              FROM licznik_counters lc 
-                             INNER JOIN users u ON lc.user_id = u.id 
-                             WHERE u.sfid_id = ? 
+                             WHERE lc.sfid_id = ? 
                              AND lc.id IN ($placeholders)
                              AND lc.is_active = 1";
-                
+
                 $teamParams = array_merge([$sfidId], $linkedCounterIds);
                 $teamStmt = $pdo->prepare($teamQuery);
                 $teamStmt->execute($teamParams);
                 $teamCounters = $teamStmt->fetchAll(PDO::FETCH_ASSOC);
-                
+
                 $kpiInfo['team_counters_count'] = count($teamCounters);
                 $kpiInfo['team_counters'] = $teamCounters;
-                
+
                 $teamCounterIds = array_column($teamCounters, 'id');
-                
+
                 if (!empty($teamCounterIds)) {
                     $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
-                    
+
                     // Sprawdź wartości za dzień
                     $dailyQuery = "SELECT counter_id, value, date FROM licznik_daily_values 
                                   WHERE counter_id IN ($teamPlaceholders) 
@@ -449,15 +447,15 @@ function getDebugInfo($date, $pdo) {
                     $dailyStmt = $pdo->prepare($dailyQuery);
                     $dailyStmt->execute($dailyParams);
                     $dailyValues = $dailyStmt->fetchAll(PDO::FETCH_ASSOC);
-                    
+
                     $kpiInfo['daily_values_count'] = count($dailyValues);
                     $kpiInfo['daily_values'] = $dailyValues;
                     $kpiInfo['daily_total'] = array_sum(array_column($dailyValues, 'value'));
-                    
+
                     // Sprawdź realizację miesięczną
                     $year = date('Y', strtotime($date));
                     $month = date('n', strtotime($date));
-                    
+
                     $monthlyQuery = "SELECT counter_id, SUM(value) as total, COUNT(*) as days
                                     FROM licznik_daily_values 
                                     WHERE counter_id IN ($teamPlaceholders) 
@@ -467,19 +465,19 @@ function getDebugInfo($date, $pdo) {
                     $monthlyStmt = $pdo->prepare($monthlyQuery);
                     $monthlyStmt->execute($monthlyParams);
                     $monthlyValues = $monthlyStmt->fetchAll(PDO::FETCH_ASSOC);
-                    
+
                     $kpiInfo['monthly_realization'] = array_sum(array_column($monthlyValues, 'total'));
                     $kpiInfo['monthly_values'] = $monthlyValues;
                 }
             }
-            
+
             $debug['kpi_goals'][] = $kpiInfo;
         }
-        
+
     } catch (Exception $e) {
         $debug['error'] = 'Błąd pobierania danych: ' . $e->getMessage();
     }
-    
+
     return $debug;
 }
 ?>
