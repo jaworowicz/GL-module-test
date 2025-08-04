@@ -1,0 +1,349 @@
+{
+    "session_sfid": "20004014",
+    "report_date": "2025-08-04",
+    "current_time": "2025-08-04 08:24:48",
+    "kpi_goals_count": 11,
+    "kpi_goals": [
+        {
+            "id": "4",
+            "name": "Pozyskanie TOTAL",
+            "monthly_goal": "157",
+            "linked_counters_count": 2,
+            "linked_counter_ids": [
+                "9",
+                "10"
+            ],
+            "team_counters_count": 2,
+            "team_counters": [
+                {
+                    "id": "9",
+                    "title": "Pozyskanie FTTH",
+                    "sfid_id": "20004014"
+                },
+                {
+                    "id": "10",
+                    "title": "Pozyskanie INNE",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 3,
+            "daily_values": [
+                {
+                    "counter_id": "9",
+                    "value": "0",
+                    "date": "2025-08-04"
+                },
+                {
+                    "counter_id": "10",
+                    "value": "0",
+                    "date": "2025-08-04"
+                },
+                {
+                    "counter_id": "10",
+                    "value": "0",
+                    "date": "2025-08-04"
+                }
+            ],
+            "daily_total": 0,
+            "monthly_realization": 21,
+            "monthly_values": [
+                {
+                    "counter_id": "9",
+                    "total": "5",
+                    "days": "2"
+                },
+                {
+                    "counter_id": "10",
+                    "total": "16",
+                    "days": "3"
+                }
+            ]
+        },
+        {
+            "id": "5",
+            "name": "VAS (SU)",
+            "monthly_goal": "38",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "12"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "12",
+                    "title": "VAS SU",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 2,
+            "monthly_values": [
+                {
+                    "counter_id": "12",
+                    "total": "2",
+                    "days": "1"
+                }
+            ]
+        },
+        {
+            "id": "6",
+            "name": "DELTA",
+            "monthly_goal": "8000",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "14"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "14",
+                    "title": "DELTA",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 1,
+            "daily_values": [
+                {
+                    "counter_id": "14",
+                    "value": "0",
+                    "date": "2025-08-04"
+                }
+            ],
+            "daily_total": 0,
+            "monthly_realization": 220,
+            "monthly_values": [
+                {
+                    "counter_id": "14",
+                    "total": "220",
+                    "days": "2"
+                }
+            ]
+        },
+        {
+            "id": "7",
+            "name": "FTTH",
+            "monthly_goal": "38",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "9"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "9",
+                    "title": "Pozyskanie FTTH",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 1,
+            "daily_values": [
+                {
+                    "counter_id": "9",
+                    "value": "0",
+                    "date": "2025-08-04"
+                }
+            ],
+            "daily_total": 0,
+            "monthly_realization": 5,
+            "monthly_values": [
+                {
+                    "counter_id": "9",
+                    "total": "5",
+                    "days": "2"
+                }
+            ]
+        },
+        {
+            "id": "8",
+            "name": "VAS (INNE)",
+            "monthly_goal": "78",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "13"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "13",
+                    "title": "VAS INNE",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 4,
+            "monthly_values": [
+                {
+                    "counter_id": "13",
+                    "total": "4",
+                    "days": "1"
+                }
+            ]
+        },
+        {
+            "id": "9",
+            "name": "Telefony",
+            "monthly_goal": "71",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "15"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "15",
+                    "title": "Telefony",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 5,
+            "monthly_values": [
+                {
+                    "counter_id": "15",
+                    "total": "5",
+                    "days": "1"
+                }
+            ]
+        },
+        {
+            "id": "10",
+            "name": "Akcesoria",
+            "monthly_goal": "36",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "17"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "17",
+                    "title": "Akcesoria",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 2,
+            "monthly_values": [
+                {
+                    "counter_id": "17",
+                    "total": "2",
+                    "days": "1"
+                }
+            ]
+        },
+        {
+            "id": "11",
+            "name": "NKS",
+            "monthly_goal": "23",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "16"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "16",
+                    "title": "NKS",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 0,
+            "monthly_values": []
+        },
+        {
+            "id": "12",
+            "name": "Zatrzymanie",
+            "monthly_goal": "400",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "11"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "11",
+                    "title": "Zatrzymanie",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 1,
+            "daily_values": [
+                {
+                    "counter_id": "11",
+                    "value": "1",
+                    "date": "2025-08-04"
+                }
+            ],
+            "daily_total": 1,
+            "monthly_realization": 40,
+            "monthly_values": [
+                {
+                    "counter_id": "11",
+                    "total": "40",
+                    "days": "2"
+                }
+            ]
+        },
+        {
+            "id": "14",
+            "name": "BAZA TOTAL",
+            "monthly_goal": "1560",
+            "linked_counters_count": 2,
+            "linked_counter_ids": [
+                "18",
+                "19"
+            ],
+            "team_counters_count": 2,
+            "team_counters": [
+                {
+                    "id": "18",
+                    "title": "ODEBRANE",
+                    "sfid_id": "20004014"
+                },
+                {
+                    "id": "19",
+                    "title": "ND\/OD",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 0,
+            "monthly_values": []
+        },
+        {
+            "id": "15",
+            "name": "Odebrane",
+            "monthly_goal": "910",
+            "linked_counters_count": 1,
+            "linked_counter_ids": [
+                "18"
+            ],
+            "team_counters_count": 1,
+            "team_counters": [
+                {
+                    "id": "18",
+                    "title": "ODEBRANE",
+                    "sfid_id": "20004014"
+                }
+            ],
+            "daily_values_count": 0,
+            "daily_values": [],
+            "daily_total": 0,
+            "monthly_realization": 0,
+            "monthly_values": []
+        }
+    ]
+}
