@@ -1093,7 +1093,9 @@ function openPublicView() {
 function toggleCounterMenu(counterId, viewType = 'grid') {
     // Zamknij wszystkie inne menu
     document.querySelectorAll('[id^="counter-menu-"]').forEach(menu => {
-        menu.classList.add('hidden');
+        if (menu.id !== `counter-menu-${counterId}` && menu.id !== `counter-menu-${counterId}-list`) {
+            menu.classList.add('hidden');
+        }
     });
 
     // Przełącz obecne menu
@@ -1107,8 +1109,10 @@ function toggleCounterMenu(counterId, viewType = 'grid') {
             const button = event.target.closest('button');
             if (button) {
                 const rect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
                 menu.style.left = (rect.left - menu.offsetWidth + button.offsetWidth) + 'px';
                 menu.style.top = (rect.top - menu.offsetHeight - 5) + 'px';
+                menu.style.zIndex = '1000';
             }
         }
     }
@@ -1125,8 +1129,11 @@ function openAddAmountModal(counterId) {
     document.getElementById('add-amount-title').textContent = `Dodaj ilość do "${counter.title}"`;
     document.getElementById('add-amount-value').value = counter.increment;
 
-    // Zamknij menu
-    document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
+    // Zamknij menu (sprawdź oba warianty)
+    const gridMenu = document.getElementById(`counter-menu-${counterId}`);
+    const listMenu = document.getElementById(`counter-menu-${counterId}-list`);
+    if (gridMenu) gridMenu.classList.add('hidden');
+    if (listMenu) listMenu.classList.add('hidden');
     
     showModal(modal);
 }
@@ -1142,8 +1149,11 @@ function openSetValueModal(counterId) {
     document.getElementById('set-value-title').textContent = `Ustaw "${counter.title}" na`;
     document.getElementById('set-value-input').value = counter.value;
 
-    // Zamknij menu
-    document.getElementById(`counter-menu-${counterId}`).classList.add('hidden');
+    // Zamknij menu (sprawdź oba warianty)
+    const gridMenu = document.getElementById(`counter-menu-${counterId}`);
+    const listMenu = document.getElementById(`counter-menu-${counterId}-list`);
+    if (gridMenu) gridMenu.classList.add('hidden');
+    if (listMenu) listMenu.classList.add('hidden');
     
     showModal(modal);
 }
