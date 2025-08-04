@@ -1,8 +1,73 @@
+/* Globalne style */
+* {
+    box-sizing: border-box;
+}
+
+/* Główny layout */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1c3d52);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    color: #e2e8f0;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Kontener główny */
+.main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Header */
+.header {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+/* Karty liczników */
+.counter-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 1rem;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    position: relative;
+}
+
+.counter-card:hover {
+    background: rgba(30, 41, 59, 0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.counter-card.selected {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Wartości liczników */
 .counter-value {
     font-size: 3rem;
     font-weight: 700;
     line-height: 1;
     transition: all 0.3s ease;
+    color: #f8fafc;
 }
 
 .currency-symbol {
@@ -12,25 +77,14 @@
     margin-left: 0.5rem;
     vertical-align: top;
 }
-.counter-value {
-    font-size: 3rem;
-    font-weight: 700;
-    line-height: 1;
-    transition: all 0.3s ease;
-}
 
-.currency-symbol {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: rgba(156, 163, 175, 0.8);
-    margin-left: 0.5rem;
-    vertical-align: top;
-}
+/* Duże kafelki (widok lista) */
 .large-tile-value {
     font-size: 6rem;
     font-weight: 800;
     margin: 2rem 0;
     text-align: center;
+    color: #f8fafc;
 }
 
 .large-currency-symbol {
@@ -39,4 +93,300 @@
     color: rgba(156, 163, 175, 0.7);
     margin-left: 1rem;
     vertical-align: top;
+}
+
+/* Tytuły i kategorie */
+.counter-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 0.25rem;
+}
+
+.counter-category {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+/* Przyciski kontroli */
+.counter-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.counter-btn {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1.125rem;
+}
+
+.counter-btn.minus {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.counter-btn.minus:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: scale(1.1);
+}
+
+.counter-btn.plus {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.counter-btn.plus:hover {
+    background: rgba(34, 197, 94, 0.3);
+    transform: scale(1.1);
+}
+
+/* Cele dzienne */
+.daily-goal {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #93c5fd;
+    text-align: center;
+}
+
+/* Paski postępu */
+.progress-bar {
+    background: rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    height: 0.75rem;
+    position: relative;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 0.5rem;
+}
+
+/* Tabele KPI */
+.kpi-table {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 1rem;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.kpi-table th {
+    background: rgba(51, 65, 85, 0.8);
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.kpi-table td {
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.kpi-table tr:hover {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+/* Modale */
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 1rem;
+    backdrop-filter: blur(20px);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+/* Formularze */
+.form-input {
+    background: rgba(51, 65, 85, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    color: #f8fafc;
+    padding: 0.75rem;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+/* Przyciski */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(71, 85, 105, 0.5);
+    color: #e2e8f0;
+    border: 1px solid rgba(71, 85, 105, 0.5);
+}
+
+.btn-secondary:hover {
+    background: rgba(71, 85, 105, 0.7);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Dropdown menu */
+.category-dropdown {
+    position: relative;
+}
+
+.category-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 0.5rem;
+    min-width: 200px;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.category-menu.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.category-menu-item {
+    padding: 0.75rem 1rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.category-menu-item:hover {
+    background: rgba(51, 65, 85, 0.7);
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 1rem;
+    }
+    
+    .counter-value {
+        font-size: 2.5rem;
+    }
+    
+    .large-tile-value {
+        font-size: 4rem;
+    }
+    
+    .counter-controls {
+        gap: 0.5rem;
+    }
+    
+    .counter-btn {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* Animacje powiadomień */
+.notification {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+/* Widok listy */
+.list-view .counter-card {
+    margin-bottom: 0.5rem;
+}
+
+.list-view .counter-value {
+    font-size: 2rem;
+}
+
+/* Widok siatki */
+.grid-view .counter-card {
+    height: auto;
+    min-height: 250px;
+}
+
+/* Menu kontekstowe licznika */
+.counter-menu {
+    position: absolute;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgb(51, 65, 85);
+    border-radius: 0.5rem;
+    backdrop-filter: blur(10px);
+    z-index: 40;
+    min-width: 180px;
+}
+
+.counter-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.counter-menu button:hover {
+    background: rgba(51, 65, 85, 0.7);
 }
