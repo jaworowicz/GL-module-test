@@ -149,12 +149,16 @@ function getKpiDataForReport($date, $pdo) {
                              FROM licznik_counters lc 
                              INNER JOIN users u ON lc.user_id = u.id 
                              WHERE u.sfid_id = ? 
-                             AND lc.id IN ($placeholders)";
+                             AND lc.id IN ($placeholders)
+                             AND lc.is_active = 1";
 
                 $teamParams = array_merge([$sfidId], $linkedCounterIds);
                 $teamStmt = $pdo->prepare($teamQuery);
                 $teamStmt->execute($teamParams);
                 $teamCounterIds = $teamStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Debug: sprawdź co znaleziono
+                error_log("KPI ID: " . $goal['id'] . ", Linked counters: " . implode(',', $linkedCounterIds) . ", Team counters found: " . implode(',', $teamCounterIds));
 
                 if (!empty($teamCounterIds)) {
                     $teamPlaceholders = str_repeat('?,', count($teamCounterIds) - 1) . '?';
@@ -168,6 +172,11 @@ function getKpiDataForReport($date, $pdo) {
                     $dailyStmt = $pdo->prepare($dailyQuery);
                     $dailyStmt->execute($dailyParams);
                     $dailyValue = $dailyStmt->fetchColumn() ?: 0;
+                    
+                    // Debug: sprawdź wartości
+                    error_log("Daily query for date $date: " . $dailyQuery);
+                    error_log("Daily params: " . print_r($dailyParams, true));
+                    error_log("Daily value result: " . $dailyValue);
 
                     // REALIZACJA MIESIĘCZNA (potrzebna do dynamicznego celu dziennego)
                     $monthlyQuery = "SELECT SUM(value) as total 

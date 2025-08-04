@@ -3,112 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raport KPI - {REPORT_DATE}</title>
+    <title>Raport KPI zespołowy</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            color: #333;
-            background: #f8f9fa;
-        }
-        .header {
-            background: #2563eb;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .report-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .report-table th {
-            background: #374151;
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-        .report-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .report-table tr:hover {
-            background: #f9fafb;
-        }
-        .value-cell {
-            text-align: right;
-            font-weight: 600;
-            font-family: 'Courier New', monospace;
-        }
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-        }
-        @media print {
-            body { margin: 0; }
-            .header { background: #333 !important; }
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #16a34a; color: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        .kpi-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .kpi-table th, .kpi-table td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        .kpi-table th { background: #f8f9fa; font-weight: bold; }
+        .kpi-row:nth-child(even) { background: #f8f9fa; }
+        .debug { background: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>RAPORT KPI ZESPOŁOWY</h1>
-        <p>Data raportu: {REPORT_DATE}</p>
-        <p>Dane za dzień: {REPORT_DATE}</p>
+        <h1>🎯 PODGLĄD RAPORTU ZESPOŁOWEGO - dane całej lokalizacji za dzień: {REPORT_DATE}</h1>
     </div>
 
-    <table class="report-table">
+    <div class="debug">
+        <strong>DEBUG INFO:</strong> Ten szablon pokazuje rzeczywiste dane z modułu liczników dla KPI ID=12.
+    </div>
+
+    <table class="kpi-table">
         <thead>
             <tr>
-                <th>KPI</th>
-                <th>Realizacja</th>
-                <th>Cel dzienny</th>
-                <th>Cel miesięczny</th>
-                <th>Status</th>
+                <th>NAZWA KPI</th>
+                <th>REALIZACJA DZIENNA</th>
+                <th>CEL DZIENNY</th>
+                <th>CEL MIESIĘCZNY</th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{KPI_NAME=12}</td>
-                <td class="value-cell">{KPI_VALUE=12}</td>
-                <td class="value-cell">{KPI_TARGET_DAILY=12}</td>
-                <td class="value-cell">{KPI_TARGET_MONTHLY=12}</td>
-                <td class="value-cell">
-                    <span style="color: #16a34a;">✓</span>
-                </td>
-            </tr>
-            <tr>
-                <td>{KPI_NAME=13}</td>
-                <td class="value-cell">{KPI_VALUE=13}</td>
-                <td class="value-cell">{KPI_TARGET_DAILY=13}</td>
-                <td class="value-cell">{KPI_TARGET_MONTHLY=13}</td>
-                <td class="value-cell">
-                    <span style="color: #dc2626;">●</span>
-                </td>
-            </tr>
-            <tr>
-                <td>{KPI_NAME=14}</td>
-                <td class="value-cell">{KPI_VALUE=14}</td>
-                <td class="value-cell">{KPI_TARGET_DAILY=14}</td>
-                <td class="value-cell">{KPI_TARGET_MONTHLY=14}</td>
-                <td class="value-cell">
-                    <span style="color: #f59e0b;">◐</span>
-                </td>
+            <tr class="kpi-row">
+                <td><strong>{KPI_NAME=12}</strong></td>
+                <td style="font-size: 18px; font-weight: bold; color: #059669;">{KPI_VALUE=12}</td>
+                <td>{KPI_TARGET_DAILY=12}</td>
+                <td>{KPI_TARGET_MONTHLY=12}</td>
             </tr>
         </tbody>
     </table>
 
-    <div class="footer">
-        <p>Raport wygenerowany automatycznie {TODAY}</p>
-        <p>System Liczników KPI - Moduł Raportowania</p>
+    <div style="margin-top: 30px; font-size: 12px; color: #666;">
+        Raport wygenerowany: {TODAY}<br>
+        System automatycznie agreguje wartości wszystkich pracowników z lokalizacji
     </div>
 </body>
 </html>
