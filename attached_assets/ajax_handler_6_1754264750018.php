@@ -85,7 +85,8 @@ function getCounterData() {
             c.increment,
             c.color,
             c.category_id,
-            c.is_personal,
+            c.type,
+            c.symbol,
             cat.name as category,
             COALESCE(dv.value, 0) as value
         FROM licznik_counters c
@@ -146,29 +147,40 @@ function saveCounterSettings() {
     $increment = max(1, intval($_POST['increment'] ?? 1));
     $categoryId = $_POST['category_id'] ?? null;
     $color = $_POST['color'] ?? '#374151';
-    $isPersonal = $_POST['is_personal'] ?? 0;
+    $type = $_POST['type'] ?? 'number';
+    $symbol = $_POST['symbol'] ?? null;
 
     if (empty($title)) {
         return ['success' => false, 'message' => 'Nazwa licznika jest wymagana'];
     }
 
+    // Walidacja typu
+    if (!in_array($type, ['number', 'currency'])) {
+        $type = 'number';
+    }
+
+    // Jeśli nie jest walutowy, usuń symbol
+    if ($type !== 'currency') {
+        $symbol = null;
+    }
+
     if ($id) {
-        // Edycja istniejącego licznika - POPRAWNE NAZWY KOLUMN
+        // Edycja istniejącego licznika
         $query = "
             UPDATE licznik_counters
-            SET title = ?, increment = ?, category_id = ?, color = ?, is_personal = ?
+            SET title = ?, increment = ?, category_id = ?, color = ?, type = ?, symbol = ?
             WHERE id = ? AND sfid_id = ?
         ";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$title, $increment, $categoryId, $color, $isPersonal, $id, $_SESSION['sfid_id']]);
+        $stmt->execute([$title, $increment, $categoryId, $color, $type, $symbol, $id, $_SESSION['sfid_id']]);
     } else {
-        // Dodanie nowego licznika - POPRAWNE NAZWY KOLUMN
+        // Dodanie nowego licznika
         $query = "
-            INSERT INTO licznik_counters (sfid_id, title, increment, category_id, color, is_personal, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM licznik_counters lc WHERE lc.sfid_id = ?))
+            INSERT INTO licznik_counters (sfid_id, title, increment, category_id, color, type, symbol, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM licznik_counters lc WHERE lc.sfid_id = ?))
         ";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$_SESSION['sfid_id'], $title, $increment, $categoryId, $color, $isPersonal, $_SESSION['sfid_id']]);
+        $stmt->execute([$_SESSION['sfid_id'], $title, $increment, $categoryId, $color, $type, $symbol, $_SESSION['sfid_id']]);
     }
 
     return ['success' => true, 'message' => 'Licznik zapisany'];

@@ -1,0 +1,42 @@
+.counter-value {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: all 0.3s ease;
+}
+
+.currency-symbol {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: rgba(156, 163, 175, 0.8);
+    margin-left: 0.5rem;
+    vertical-align: top;
+}
+.counter-value {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: all 0.3s ease;
+}
+
+.currency-symbol {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: rgba(156, 163, 175, 0.8);
+    margin-left: 0.5rem;
+    vertical-align: top;
+}
+.large-tile-value {
+    font-size: 6rem;
+    font-weight: 800;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.large-currency-symbol {
+    font-size: 3rem;
+    font-weight: 600;
+    color: rgba(156, 163, 175, 0.7);
+    margin-left: 1rem;
+    vertical-align: top;
+}
