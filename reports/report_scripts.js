@@ -1,4 +1,3 @@
-
 // === FUNKCJE SZYBKIEGO RAPORTU ===
 
 // Otwórz modal szybkiego raportu
@@ -8,7 +7,7 @@ function openQuickReportModal() {
 
     // Załaduj dostępne szablony
     loadReportTemplates();
-    
+
     showModal(modal);
 }
 
@@ -26,18 +25,18 @@ async function loadReportTemplates() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             const select = document.getElementById('report-template');
             select.innerHTML = '';
-            
+
             data.templates.forEach(template => {
                 const option = document.createElement('option');
                 option.value = template.filename;
                 option.textContent = template.name;
                 select.appendChild(option);
             });
-            
+
             // Załaduj podgląd pierwszego szablonu
             if (data.templates.length > 0) {
                 loadReportPreview(data.templates[0].filename);
@@ -65,7 +64,7 @@ async function loadReportPreview(templateName) {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             document.getElementById('report-preview').innerHTML = data.preview;
         } else {
@@ -81,7 +80,7 @@ async function loadReportPreview(templateName) {
 async function generateReport() {
     const template = document.getElementById('report-template').value;
     const date = document.getElementById('report-date').value;
-    
+
     try {
         const response = await fetch('reports/report_handler.php', {
             method: 'POST',
@@ -96,13 +95,13 @@ async function generateReport() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             // Otwórz raport w nowym oknie
             const newWindow = window.open('', '_blank');
             newWindow.document.write(data.html);
             newWindow.document.close();
-            
+
             showNotification('Raport wygenerowany pomyślnie', 'success');
             closeAllModals();
         } else {
@@ -118,7 +117,7 @@ async function generateReport() {
 async function downloadReport() {
     const template = document.getElementById('report-template').value;
     const date = document.getElementById('report-date').value;
-    
+
     try {
         const response = await fetch('reports/report_handler.php', {
             method: 'POST',
@@ -133,7 +132,7 @@ async function downloadReport() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             // Utwórz plik do pobrania
             const blob = new Blob([data.html], { type: 'text/html' });
@@ -145,7 +144,7 @@ async function downloadReport() {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            
+
             showNotification('Raport pobrany pomyślnie', 'success');
             closeAllModals();
         } else {
@@ -161,13 +160,13 @@ async function downloadReport() {
 document.addEventListener('DOMContentLoaded', function() {
     const templateSelect = document.getElementById('report-template');
     const dateInput = document.getElementById('report-date');
-    
+
     if (templateSelect) {
         templateSelect.addEventListener('change', function() {
             loadReportPreview(this.value);
         });
     }
-    
+
     if (dateInput) {
         dateInput.addEventListener('change', function() {
             const template = document.getElementById('report-template').value;

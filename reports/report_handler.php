@@ -43,10 +43,12 @@ function getReportTemplates() {
         if (is_dir($templatesDir)) {
             $files = scandir($templatesDir);
             foreach ($files as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'php' && $file !== 'report_handler.php') {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'php' && $file !== 'report_handler.php' && $file !== 'report_scripts.js') {
+                    $name = pathinfo($file, PATHINFO_FILENAME);
+                    $displayName = $name === 'default' ? 'Raport Dzienny' : ucfirst($name) . ' Report';
                     $templates[] = [
                         'filename' => $file,
-                        'name' => ucfirst(pathinfo($file, PATHINFO_FILENAME)) . ' Report'
+                        'name' => $displayName
                     ];
                 }
             }

@@ -51,6 +51,54 @@
         .value-positive { background-color: #dcfce7; color: #166534; }
         .value-negative { background-color: #fecaca; color: #dc2626; }
         .value-neutral { background-color: #f8fafc; color: #374151; }
+        
+        /* Responsywne style */
+        @media (max-width: 768px) {
+            body { 
+                padding: 10px; 
+                font-size: 14px; 
+            }
+            .report-container { 
+                margin: 0; 
+                border-radius: 0;
+            }
+            .report-header { 
+                padding: 15px; 
+            }
+            .report-header h1 { 
+                font-size: 1.5rem; 
+                margin: 0 0 10px 0;
+            }
+            .report-table { 
+                font-size: 12px; 
+            }
+            .report-table th, .report-table td { 
+                padding: 6px 4px; 
+            }
+            .section-header { 
+                font-size: 13px; 
+                padding: 6px 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            .report-header h1 { 
+                font-size: 1.2rem; 
+            }
+            .report-table { 
+                font-size: 10px; 
+            }
+            .report-table th, .report-table td { 
+                padding: 4px 2px; 
+            }
+            .section-header {
+                font-size: 11px;
+                padding: 4px 6px;
+            }
+        }
     </style>
 </head>
 <body>
