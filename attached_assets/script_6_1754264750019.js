@@ -1127,23 +1127,30 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
             menu.style.left = 'auto';
             menu.style.zIndex = '1000';
         } else {
-            // Pozycjonowanie fixed dla menu w widoku listy
-            const button = event ? event.target.closest('button') : null;
-            if (button) {
-                const rect = button.getBoundingClientRect();
-                menu.style.position = 'fixed';
-                menu.style.zIndex = '1000';
+                    // Pozycjonowanie fixed dla menu w widoku listy
+                    const button = event ? event.target.closest('button') : null;
+                    if (button) {
+                        const rect = button.getBoundingClientRect();
+                        menu.style.position = 'fixed';
+                        menu.style.zIndex = '1000';
 
-                // Pozycjonuj z lewej strony przycisku
-                menu.style.left = (rect.left - 180) + 'px';
-                menu.style.top = rect.top + 'px';
+                        // Domyślnie umieść z lewej strony przycisku
+                        let leftPos = rect.left - 180;
 
-                // Sprawdź czy menu nie wychodzi poza ekran
-                if (rect.left < 200) {
-                    menu.style.left = (rect.right + 5) + 'px';
+                        // Jeśli menu wychodzi poza lewą krawędź, umieść z prawej strony
+                        if (leftPos < 10) {
+                            leftPos = rect.right + 5;
+                        }
+
+                        // Jeśli nadal wychodzi poza prawą krawędź, wycentruj
+                        if (leftPos + 180 > window.innerWidth) {
+                            leftPos = Math.max(10, window.innerWidth - 190);
+                        }
+
+                        menu.style.left = leftPos + 'px';
+                        menu.style.top = rect.top + 'px';
+                    }
                 }
-            }
-        }
     } else {
         // Ukryj menu
         menu.classList.add('hidden');

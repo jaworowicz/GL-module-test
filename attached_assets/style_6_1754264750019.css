@@ -168,6 +168,20 @@ body {
     line-height: 1.3;
 }
 
+/* Cele osobiste - niebieskie */
+.daily-goal.personal {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+/* Cele zespołowe - zielone */
+.daily-goal.team {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
 .daily-goals-container {
     margin-top: 0.5rem;
 }
@@ -473,6 +487,9 @@ body {
     text-align: center;
     min-height: 250px;
     padding: 1.5rem;
+    background: linear-gradient(-45deg, rgba(15, 32, 39, 0.7), rgba(32, 58, 67, 0.7), rgba(44, 83, 100, 0.7), rgba(28, 61, 82, 0.7));
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
 }
 
 .counters-container.grid-view .counter-header {
