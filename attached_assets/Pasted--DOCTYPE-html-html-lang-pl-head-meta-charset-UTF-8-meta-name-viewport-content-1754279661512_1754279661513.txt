@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raport Dzienny</title>
+    <!-- Import Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Tło body nie będzie widoczne, bo tabela jest osadzona, ale ustawiam na neutralne */
+            background-color: transparent; 
+        }
+        /* Dodajemy word-break, aby zapobiec "rozpychaniu" komórek przez długie słowa */
+        .cell-content {
+            word-break: break-word;
+        }
+        /* Ustawienie border-collapse dla tabeli */
+        table {
+            border-collapse: collapse;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Usunięto tło z głównego kontenera, aby polegać na tle aplikacji hostującej -->
+    <div class="p-0">
+        <div class="w-full max-w-4xl mx-auto">
+            
+            <!-- Kontener tabeli bez przewijania, z jasnym motywem -->
+            <div class="rounded-lg shadow-lg bg-white overflow-hidden">
+                <table class="w-full text-sm sm:text-base text-gray-800">
+                    
+                    <!-- Sekcja Wolumen -->
+                    <thead>
+                        <tr>
+                            <!-- Jasne nagłówki tabeli -->
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content w-1/2">WOLUMEN</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">ILOŚĆ</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">CEL DZIENNY</th>
+                            <th class="p-2 border-b border-gray-300 text-center bg-blue-200 font-bold cell-content"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Wiersz 1 -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=1}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=1}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=1}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-white"></td>
+                        </tr>
+                        <!-- Wiersz 2 -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=2}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=2}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=2}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-white"></td>
+                        </tr>
+                        <!-- Wiersz 3 -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=3}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=3}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=3}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-white"></td>
+                        </tr>
+                        <!-- Wiersz 4 -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=4}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=4}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=4}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-white"></td>
+                        </tr>
+                        <!-- Wiersz 5 -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=5}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=5}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=5}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-white"></td>
+                        </tr>
+                        <!-- Pusty wiersz dla estetyki -->
+                        <tr>
+                            <td colspan="4" class="h-4 bg-white" style="border: none;"></td>
+                        </tr>
+                        <!-- Sekcja Wartość z Klienta -->
+                        <tr>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">WARTOŚĆ Z KLIENTA</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">ILOŚĆ</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">ŁĄCZNA KWOTA</th>
+                            <th class="p-2 border-b border-gray-300 text-center bg-blue-200 font-bold cell-content">ND</th>
+                        </tr>
+                        <!-- Wiersz danych -->
+                        <tr>
+                            <td class="p-2 border-b border-r border-gray-300 text-left font-semibold bg-blue-100 cell-content">{KPI_NAME=6}</td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white"></td>
+                            <td class="p-2 border-b border-r border-gray-300 text-center bg-white cell-content">{KPI_VALUE=6}</td>
+                            <td class="p-2 border-b border-gray-300 text-center bg-gray-50 cell-content">{KPI_TARGET_DAILY=6}</td>
+                        </tr>
+                        <!-- Pusty wiersz dla estetyki -->
+                        <tr>
+                            <td colspan="4" class="h-4 bg-white" style="border: none;"></td>
+                        </tr>
+                        <!-- Sekcja Baza Zestaw -->
+                        <tr>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">BAZA ZESTAW</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">WYKONANE</th>
+                            <th class="p-2 border-b border-r border-gray-300 text-center bg-blue-200 font-bold cell-content">ODEBRANE</th>
+                            <th class="p-2 border-b border-gray-300 text-center bg-blue-200 font-bold cell-content">CEL DZIENNY ODEBRANE</th>
+                        </tr>
+                        <!-- Wiersz danych -->
+                        <tr>
+                            <td class="p-2 border-r border-gray-300 text-left font-semibold bg-blue-100"></td>
+                            <td class="p-2 border-r border-gray-300 text-center bg-white"></td>
+                            <td class="p-2 border-r border-gray-300 text-center bg-white"></td>
+                            <td class="p-2 text-center font-bold text-lg bg-white cell-content">{KPI_TARGET_DAILY=7}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-2 text-gray-500 text-xs">
+                <p>wygenerowano w workerty.eu</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
