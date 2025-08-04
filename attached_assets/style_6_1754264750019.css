@@ -565,6 +565,14 @@ body {
     margin-top: 0.25rem;
 }
 
+/* Specjalne pozycjonowanie dla widoku listy */
+.counters-container.list-view .counter-menu {
+    position: fixed;
+    top: auto;
+    right: auto;
+    transform: translateY(-100%);
+}
+
 .counter-menu button {
     width: 100%;
     text-align: left;

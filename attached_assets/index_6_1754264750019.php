@@ -336,7 +336,7 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div><span>D</span>Usuń</div>
             <div><span>V</span>Zmień widok</div>
             <div><span>K</span>Zmień kategorię</div>
-            <div><span>ENTER</span>Large Tile</div>
+            <div><span>I</span>Dodaj ilość</div>
             <div><span>ESC</span>Zamknij okno</div>
         </div>
     </header>
@@ -600,78 +600,3 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
                 <button onclick="saveMassCorrection()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500">Zapisz Korekty</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Amount Modal -->
-    <div id="add-amount-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2 id="add-amount-title" class="text-xl font-bold mb-4 text-white p-6 border-b border-slate-700">Dodaj ilość</h2>
-            <input type="hidden" id="add-amount-counter-id">
-            <div class="p-6 space-y-4">
-                <div>
-                    <label for="add-amount-value" class="block text-sm font-medium text-gray-300 mb-1">Ilość do dodania</label>
-                    <input type="number" id="add-amount-value" class="w-full custom-input" placeholder="0">
-                </div>
-            </div>
-            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
-                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
-                <button onclick="saveAddAmount()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Dodaj</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Set Value Modal -->
-    <div id="set-value-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2 id="set-value-title" class="text-xl font-bold mb-4 text-white p-6 border-b border-slate-700">Ustaw wartość</h2>
-            <input type="hidden" id="set-value-counter-id">
-            <div class="p-6 space-y-4">
-                <div>
-                    <label for="set-value-input" class="block text-sm font-medium text-gray-300 mb-1">Nowa wartość</label>
-                    <input type="number" id="set-value-input" class="w-full custom-input" placeholder="0">
-                </div>
-            </div>
-            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
-                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
-                <button onclick="saveSetValue()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-500">Ustaw</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="delete-confirm-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold mb-4 text-white p-6 border-b border-slate-700">Potwierdź usunięcie</h2>
-            <p class="text-gray-300 mb-6 px-6">Czy na pewno chcesz trwale usunąć ten licznik?</p>
-            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
-                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
-                <button onclick="confirmDeletion()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-500">Tak, usuń</button>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<!-- Przekaż dane PHP do JavaScript -->
-<script>
-    window.appData = {
-        currentUserId: <?php echo $current_user_id; ?>,
-        currentSfid: <?php echo $current_sfid; ?>,
-        isAdmin: <?php echo $is_admin ? 'true' : 'false'; ?>,
-        isSuperadmin: <?php echo $is_superadmin ? 'true' : 'false'; ?>,
-        users: <?php echo json_encode($users); ?>,
-        categories: <?php echo json_encode($categories); ?>,
-        counters: <?php echo json_encode($counters); ?>,
-        kpiGoals: <?php echo json_encode($kpi_goals); ?>,
-        today: '<?php echo $today; ?>',
-        currentMonth: '<?php echo $current_month; ?>',
-        totalWorkingDays: <?php echo $total_working_days; ?>,
-        remainingWorkingDays: <?php echo $remaining_working_days; ?>
-    };
-</script>
-
-<script src="script.js"></script>
-
-<?php require_once '../../includes/footer-new.php'; ?>

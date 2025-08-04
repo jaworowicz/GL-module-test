@@ -125,6 +125,12 @@ function setupKeyboardNavigation() {
                     adjustCounterValue(selectedCounterId, 1);
                 }
                 break;
+            case 'i':
+                if (selectedCounterId) {
+                    e.preventDefault();
+                    openAddAmountModal(selectedCounterId);
+                }
+                break;
         }
     });
 }
@@ -1095,6 +1101,16 @@ function toggleCounterMenu(counterId, viewType = 'grid') {
     const menu = document.getElementById(menuId);
     if (menu) {
         menu.classList.toggle('hidden');
+        
+        // Dla widoku listy, ustaw pozycję względem przycisku
+        if (viewType === 'list' && !menu.classList.contains('hidden')) {
+            const button = event.target.closest('button');
+            if (button) {
+                const rect = button.getBoundingClientRect();
+                menu.style.left = (rect.left - menu.offsetWidth + button.offsetWidth) + 'px';
+                menu.style.top = (rect.top - menu.offsetHeight - 5) + 'px';
+            }
+        }
     }
 }
 
