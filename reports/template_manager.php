@@ -32,6 +32,10 @@ try {
             echo json_encode(previewTemplate($_POST['html_content'], $_POST['date']));
             break;
 
+        case 'get_kpi_placeholders':
+            echo json_encode(getKpiPlaceholders());
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Nieznana akcja']);
     }
@@ -275,5 +279,38 @@ function processTemplatePreview($template, $kpiData, $date) {
     }
 
     return $template;
+}
+
+function getKpiPlaceholders() {
+    global $pdo;
+    
+    try {
+        // Pobierz wszystkie aktywne cele KPI z bazy danych
+        $query = "SELECT id, name FROM licznik_kpi_goals WHERE is_active = 1 ORDER BY id ASC";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute();
+        $kpiGoals = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $placeholders = [];
+        
+        foreach ($kpiGoals as $kpi) {
+            $placeholders[] = [
+                'id' => $kpi['id'],
+                'name' => $kpi['name'],
+                'placeholders' => [
+                    '{KPI_NAME=' . $kpi['id'] . '}',
+                    '{KPI_VALUE=' . $kpi['id'] . '}', 
+                    '{KPI_TARGET_DAILY=' . $kpi['id'] . '}',
+                    '{KPI_TARGET_MONTHLY=' . $kpi['id'] . '}'
+                ]
+            ];
+        }
+        
+        return ['success' => true, 'placeholders' => $placeholders];
+        
+    } catch (Exception $e) {
+        error_log("Błąd pobierania placeholderów KPI: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Błąd pobierania danych KPI'];
+    }
 }
 ?>
