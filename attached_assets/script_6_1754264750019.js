@@ -844,8 +844,7 @@ async function saveKpiGoal() {
 async function deleteKpiGoal(goalId) {
     if (!confirm('Czy na pewno chcesz usunąć ten cel KPI?')) return;
 
-    try {
-        const response = await fetch('ajax_handler.php', {
+    try {        const response = await fetch('ajax_handler.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -1127,42 +1126,28 @@ function toggleCounterMenu(counterId, viewType = 'grid', event) {
 
     const isHidden = menu.classList.contains('hidden');
 
+    // Pozycjonowanie dla menu w widoku siatki - używaj absolute z resetem inline styles
+        if (viewType === 'grid') {
+            // Reset wszystkich inline styles
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.zIndex = '';
+            // Klasy CSS zarządzają pozycjonowaniem
+        } else {
+            // W widoku listy - usuń wszystkie inline styles aby menu było widoczne
+            // (licznik może się poszarzyć ale menu będzie działać)
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.zIndex = '';
+        }
+
     if (isHidden) {
         // Pokazuj menu
         menu.classList.remove('hidden');
-
-        // Pozycjonowanie relative dla menu w widoku siatki
-        if (viewType === 'grid') {
-            menu.style.position = 'absolute';
-            menu.style.top = '100%';
-            menu.style.right = '0';
-            menu.style.left = 'auto';
-            menu.style.zIndex = '1000';
-        } else {
-                    // Pozycjonowanie fixed dla menu w widoku listy
-                    const button = event ? event.target.closest('button') : null;
-                    if (button) {
-                        const rect = button.getBoundingClientRect();
-                        menu.style.position = 'fixed';
-                        menu.style.zIndex = '1000';
-
-                        // Domyślnie umieść z lewej strony przycisku
-                        let leftPos = rect.left - 180;
-
-                        // Jeśli menu wychodzi poza lewą krawędź, umieść z prawej strony
-                        if (leftPos < 10) {
-                            leftPos = rect.right + 5;
-                        }
-
-                        // Jeśli nadal wychodzi poza prawą krawędź, wycentruj
-                        if (leftPos + 180 > window.innerWidth) {
-                            leftPos = Math.max(10, window.innerWidth - 190);
-                        }
-
-                        menu.style.left = leftPos + 'px';
-                        menu.style.top = rect.top + 'px';
-                    }
-                }
     } else {
         // Ukryj menu
         menu.classList.add('hidden');
@@ -1198,29 +1183,12 @@ function toggleCounterMenuList(counterId, event) {
             // Pokazuj menu
             menu.classList.remove('hidden');
 
-            // Pozycjonowanie fixed dla menu w widoku listy
-            const button = event ? event.target.closest('button') : null;
-            if (button) {
-                const rect = button.getBoundingClientRect();
-                menu.style.position = 'fixed';
-                menu.style.zIndex = '1000';
-
-                // Domyślnie umieść z lewej strony przycisku
-                let leftPos = rect.left - 180;
-
-                // Jeśli menu wychodzi poza lewą krawędź, umieść z prawej strony
-                if (leftPos < 10) {
-                    leftPos = rect.right + 5;
-                }
-
-                // Jeśli nadal wychodzi poza prawą krawędź, wycentruj
-                if (leftPos + 180 > window.innerWidth) {
-                    leftPos = Math.max(10, window.innerWidth - 190);
-                }
-
-                menu.style.left = leftPos + 'px';
-                menu.style.top = rect.top + 'px';
-            }
+            // W widoku listy - usuń wszystkie inline styles aby menu było widoczne
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.zIndex = '';
         } else {
             // Ukryj menu
             menu.classList.add('hidden');
