@@ -373,6 +373,9 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                     <button onclick="openMassCorrectionModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
                         <i class="fas fa-database mr-2"></i> Korekta Masowa
                     </button>
+                    <button onclick="openQuickReportModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <i class="fas fa-file-alt mr-2"></i> Szybki Raport
+                    </button>
                     <button onclick="openAddKpiModal()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg flex items-center">
                         <i class="fas fa-plus mr-2"></i> Dodaj Cel
                     </button>
@@ -648,6 +651,39 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
             <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
                 <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Anuluj</button>
                 <button onclick="confirmDeletion()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-500">Tak, usuń</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Report Modal -->
+    <div id="quick-report-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <h2 class="text-2xl font-bold mb-6 text-white p-6 border-b border-slate-700">Szybki Raport KPI</h2>
+            
+            <div class="p-6">
+                <div class="mb-4">
+                    <label for="report-template" class="block text-sm font-medium text-gray-300 mb-2">Szablon raportu</label>
+                    <select id="report-template" class="w-full custom-input">
+                        <option value="default">Default Report</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="report-date" class="block text-sm font-medium text-gray-300 mb-2">Data raportu</label>
+                    <input type="date" id="report-date" class="w-full custom-input" value="<?php echo date('Y-m-d'); ?>">
+                </div>
+                
+                <div class="bg-slate-800/50 border border-slate-600 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <div id="report-preview">
+                        <p class="text-gray-400">Wybierz szablon aby zobaczyć podgląd...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 p-6 border-t border-slate-700">
+                <button onclick="closeAllModals()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500 text-white">Zamknij</button>
+                <button onclick="generateReport()" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-500">Generuj Raport</button>
+                <button onclick="downloadReport()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500">Pobierz HTML</button>
             </div>
         </div>
     </div>

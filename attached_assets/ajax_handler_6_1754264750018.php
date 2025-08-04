@@ -1,4 +1,7 @@
+Adding report generation functionality based on templates stored in the /reports/ directory.
+```
 
+```php
 <?php
 require_once '../../includes/auth.php';
 require_once '../../includes/db.php';
@@ -60,6 +63,18 @@ try {
 
         case 'sort_counters':
             echo json_encode(sortCounters());
+            break;
+
+        case 'get_report_templates':
+            echo json_encode(getReportTemplates());
+            break;
+
+        case 'get_report_preview':
+            echo json_encode(getReportPreview($_POST['template'], $_POST['date'], $pdo));
+            break;
+
+        case 'generate_report':
+            echo json_encode(generateReport($_POST['template'], $_POST['date'], $pdo));
             break;
 
         default:
@@ -584,23 +599,23 @@ function getWorkingDaysInMonth($year, $month) {
 // Oblicz dynamiczny cel dzienny uwzględniający zespołową realizację i pozostałe dni
 function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $month, $sfidId) {
     global $pdo;
-    
+
     // Pobierz dni robocze z tabeli global_working_hours lub oblicz automatycznie
     $workingDaysQuery = "SELECT working_days FROM global_working_hours WHERE sfid_id = ? AND year = ? AND month = ?";
     $stmt = $pdo->prepare($workingDaysQuery);
     $stmt->execute([$sfidId, $year, $month]);
     $workingDaysData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     $totalWorkingDays = $workingDaysData['working_days'] ?? getWorkingDaysInMonth($year, $month);
-    
+
     // Oblicz ile dni roboczych już minęło w tym miesiącu (bez niedziel)
     $today = date('j'); // dzień miesiąca
     $currentMonth = date('n'); // miesiąc bieżący
     $currentYear = date('Y'); // rok bieżący
-    
+
     $elapsedWorkingDays = 0;
     $remainingWorkingDays = $totalWorkingDays;
-    
+
     // Jeśli to bieżący miesiąc, oblicz ile dni roboczych już minęło
     if ($year == $currentYear && $month == $currentMonth) {
         for ($day = 1; $day < $today; $day++) {
@@ -609,7 +624,7 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
                 $elapsedWorkingDays++;
             }
         }
-        
+
         // Oblicz pozostałe dni robocze (włącznie z dzisiaj)
         $remainingWorkingDays = 0;
         for ($day = $today; $day <= cal_days_in_month(CAL_GREGORIAN, $month, $year); $day++) {
@@ -619,19 +634,173 @@ function calculateDynamicDailyGoal($totalGoal, $currentRealization, $year, $mont
             }
         }
     }
-    
+
     // Oblicz ile jeszcze trzeba zrealizować
     $remainingGoal = max(0, $totalGoal - $currentRealization);
-    
+
     // Jeśli nie ma pozostałych dni roboczych, zwróć 0
     if ($remainingWorkingDays <= 0) {
         return 0;
     }
-    
+
     // Cel dzienny = pozostały cel / pozostałe dni robocze
     $dynamicDailyGoal = round($remainingGoal / $remainingWorkingDays, 1);
-    
+
     // Minimum 0 (nie może być ujemny)
     return max(0, $dynamicDailyGoal);
 }
-?>
+
+// === FUNKCJE RAPORTÓW ===
+
+function getReportTemplates() {
+    try {
+        $templatesDir = __DIR__ . '/../reports/';
+        $templates = [];
+
+        if (is_dir($templatesDir)) {
+            $files = scandir($templatesDir);
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+                    $templates[] = [
+                        'filename' => $file,
+                        'name' => ucfirst(pathinfo($file, PATHINFO_FILENAME)) . ' Report'
+                    ];
+                }
+            }
+        }
+
+        return ['success' => true, 'templates' => $templates];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Błąd ładowania szablonów: ' . $e->getMessage()];
+    }
+}
+
+function getReportPreview($templateName, $date, $pdo) {
+    try {
+        $templatePath = __DIR__ . '/../reports/' . $templateName;
+
+        if (!file_exists($templatePath)) {
+            return ['success' => false, 'message' => 'Szablon nie istnieje'];
+        }
+
+        $templateContent = file_get_contents($templatePath);
+
+        // Pobierz dane KPI dla podglądu (tylko pierwsze 3 cele)
+        $kpiData = getKpiDataForReport($date, $pdo, 3);
+
+        // Zastąp placeholdery podglądem
+        $preview = processReportTemplate($templateContent, $kpiData, $date, true);
+
+        // Usuń HTML i zwróć tylko tabelę
+        $preview = preg_replace('/<html.*?<body[^>]*>/s', '', $preview);
+        $preview = preg_replace('/<\/body>.*?<\/html>/s', '', $preview);
+        $preview = preg_replace('/<head>.*?<\/head>/s', '', $preview);
+        $preview = str_replace('<!DOCTYPE html>', '', $preview);
+
+        return ['success' => true, 'preview' => $preview];
+
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Błąd przetwarzania szablonu: ' . $e->getMessage()];
+    }
+}
+
+function generateReport($templateName, $date, $pdo) {
+    try {
+        $templatePath = __DIR__ . '/../reports/' . $templateName;
+
+        if (!file_exists($templatePath)) {
+            return ['success' => false, 'message' => 'Szablon nie istnieje'];
+        }
+
+        $templateContent = file_get_contents($templatePath);
+
+        // Pobierz wszystkie dane KPI
+        $kpiData = getKpiDataForReport($date, $pdo);
+
+        // Przetwórz szablon
+        $reportHtml = processReportTemplate($templateContent, $kpiData, $date, false);
+
+        return ['success' => true, 'html' => $reportHtml];
+
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Błąd generowania raportu: ' . $e->getMessage()];
+    }
+}
+
+function getKpiDataForReport($date, $pdo, $limit = null) {
+    try {
+        $sfid = $_SESSION['sfid_id'];
+
+        // Pobierz cele KPI
+        $kpiQuery = "SELECT * FROM licznik_kpi_goals WHERE sfid_id = ? AND is_active = 1 ORDER BY id ASC";
+        if ($limit) {
+            $kpiQuery .= " LIMIT " . (int)$limit;
+        }
+
+        $kpiStmt = $pdo->prepare($kpiQuery);
+        $kpiStmt->execute([$sfid]);
+        $kpiGoals = $kpiStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $kpiData = [];
+
+        foreach ($kpiGoals as $goal) {
+            $linkedCounterIds = json_decode($goal['linked_counter_ids'], true) ?: [];
+
+            // Pobierz wartości dla tego dnia
+            $totalValue = 0;
+            if (!empty($linkedCounterIds)) {
+                $placeholders = str_repeat('?,', count($linkedCounterIds) - 1) . '?';
+                $valueQuery = "SELECT SUM(value) as total 
+                              FROM licznik_values 
+                              WHERE counter_id IN ($placeholders) 
+                              AND date = ? 
+                              AND sfid_id = ?";
+
+                $params = array_merge($linkedCounterIds, [$date, $sfid]);
+                $valueStmt = $pdo->prepare($valueQuery);
+                $valueStmt->execute($params);
+                $totalValue = $valueStmt->fetchColumn() ?: 0;
+            }
+
+            // Oblicz cel dzienny (zaokrąglony w górę)
+            $dailyGoal = 0;
+            if ($goal['total_goal'] > 0) {
+                // Pobierz liczbę dni roboczych w miesiącu
+                $monthStart = date('Y-m-01', strtotime($date));
+                $monthEnd = date('Y-m-t', strtotime($date));
+                $workingDays = calculateWorkingDaysInRange($monthStart, $monthEnd);
+                $dailyGoal = ceil($goal['total_goal'] / $workingDays);
+            }
+
+            $kpiData[$goal['id']] = [
+                'value' => $totalValue,
+                'daily_goal' => $dailyGoal,
+                'monthly_goal' => $goal['total_goal'],
+                'name' => $goal['name']
+            ];
+        }
+
+        return $kpiData;
+
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+function processReportTemplate($template, $kpiData, $date, $isPreview = false) {
+    // Zastąp datę raportu
+    $template = str_replace('{REPORT_DATE}', date('d.m.Y', strtotime($date)), $template);
+
+    // Zastąp placeholdery KPI
+    foreach ($kpiData as $kpiId => $data) {
+        $template = str_replace('{KPI_VALUE=' . $kpiId . '}', $data['value'], $template);
+        $template = str_replace('{KPI_TARGET_DAILY=' . $kpiId . '}', $data['daily_goal'], $template);
+        $template = str_replace('{KPI_TARGET_MONTHLY=' . $kpiId . '}', $data['monthly_goal'], $template);
+        $template = str_replace('{KPI_NAME=' . $kpiId . '}', $data['name'], $template);
+    }
+
+    // Usuń nieużywane placeholdery
+    $template = preg_replace('/\{KPI_[^}]+\}/', '-', $template);
+
+    // W podglądzie dodaj informację o ograniczeniu
+    if ($isPreview) {
