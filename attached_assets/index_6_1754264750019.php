@@ -307,7 +307,6 @@ $remaining_working_days = calculateRemainingWorkingDays($current_year, $current_
                 </div>
                 <?php if ($is_admin): ?>
                 <button onclick="openAddCounterModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg">Dodaj Licznik</button>
-                <button onclick="openAddCategoryModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg">Dodaj Kategorię</button>
                 <?php endif; ?>
                 <button onclick="openPublicView()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg">Widok Publiczny</button>
             </div>

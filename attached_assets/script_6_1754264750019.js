@@ -189,7 +189,7 @@ function renderCounters() {
 // Tworzenie karty licznika
 function createCounterCard(counter, index) {
     const card = document.createElement('div');
-    card.className = 'counter-card p-6 cursor-pointer';
+    card.className = 'counter-card cursor-pointer';
     card.dataset.counterId = counter.id;
     card.style.borderLeftColor = counter.color || '#374151';
 
@@ -217,12 +217,12 @@ function createCounterCard(counter, index) {
         `<span class="currency-symbol">${counter.symbol}</span>` : '';
 
     card.innerHTML = `
-        <div class="flex justify-between items-start mb-4">
-            <div class="flex-1">
-                <h3 class="counter-title mb-1">${escapeHtml(counter.title)}</h3>
-                <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
-            </div>
-            <div class="flex space-x-2">
+        <div class="counter-header">
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                    <h3 class="counter-title">${escapeHtml(counter.title)}</h3>
+                    <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
+                </div>
                 <div class="relative">
                     <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
                         <i class="fas fa-ellipsis-v"></i>
@@ -238,12 +238,10 @@ function createCounterCard(counter, index) {
                     </div>
                 </div>
             </div>
+            ${dailyGoalText ? `<div class="daily-goal">${dailyGoalText}</div>` : ''}
         </div>
 
-        <div class="text-center mb-4">
-            <div class="counter-value" id="counter-value-${counter.id}">${counter.value}</div>
-            ${currencySymbol}
-        </div>
+        <div class="counter-value" id="counter-value-${counter.id}">${counter.value}${currencySymbol}</div>
 
         <div class="counter-controls">
             <button class="counter-btn minus" onclick="adjustCounterValue(${counter.id}, -1)" title="Zmniejsz (←/-)">
@@ -253,8 +251,6 @@ function createCounterCard(counter, index) {
                 <i class="fas fa-plus"></i>
             </button>
         </div>
-
-        ${dailyGoalText ? `<div class="daily-goal">${dailyGoalText}</div>` : ''}
     `;
 
     // Event listener dla zaznaczania
@@ -773,6 +769,56 @@ async function deleteKpiGoal(goalId) {
 }
 
 // === FUNKCJE KATEGORII ===
+
+// Otwórz modal dodawania kategorii
+function openAddCategoryModal() {
+    const modal = document.getElementById('add-category-modal');
+    if (!modal) return;
+
+    // Wyczyść formularz
+    document.getElementById('new-category-name').value = '';
+
+    showModal(modal);
+}
+
+// Dodaj nową kategorię
+async function addNewCategory() {
+    const name = document.getElementById('new-category-name').value.trim();
+
+    if (!name) {
+        showNotification('Nazwa kategorii jest wymagana', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('ajax_handler.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'add_category',
+                name: name
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Kategoria dodana pomyślnie', 'success');
+            closeAllModals();
+            // Odśwież dane kategorii
+            window.appData.categories.push({id: data.category_id, name: name});
+            populateCategoryDropdown();
+            populateModalCategories();
+        } else {
+            showNotification('Błąd dodawania kategorii: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Błąd AJAX:', error);
+        showNotification('Błąd połączenia z serwerem', 'error');
+    }
+}
 
 // Wypełnij dropdown kategorii
 function populateCategoryDropdown() {
