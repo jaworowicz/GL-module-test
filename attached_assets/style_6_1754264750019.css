@@ -155,14 +155,28 @@ body {
 
 /* Cele dzienne */
 .daily-goal {
-    margin-top: 1rem;
-    padding: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
     background: rgba(59, 130, 246, 0.1);
     border: 1px solid rgba(59, 130, 246, 0.2);
     border-radius: 0.5rem;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: #93c5fd;
     text-align: center;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.daily-goals-container {
+    margin-top: 0.5rem;
+}
+
+.daily-goals-container > div {
+    margin-bottom: 0.25rem;
+}
+
+.daily-goals-container > div:last-child {
+    margin-bottom: 0;
 }
 
 /* Paski postępu */
@@ -539,6 +553,8 @@ body {
 /* Menu kontekstowe licznika */
 .counter-menu {
     position: absolute;
+    top: 100%;
+    right: 0;
     background: rgba(30, 41, 59, 0.95);
     border: 1px solid rgb(51, 65, 85);
     border-radius: 0.5rem;
@@ -546,6 +562,7 @@ body {
     z-index: 40;
     min-width: 180px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    margin-top: 0.25rem;
 }
 
 .counter-menu button {

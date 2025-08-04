@@ -229,7 +229,6 @@ function createCounterCard(counter, index, viewType = 'grid') {
                     <div class="daily-goals-container-list text-xs text-gray-400" id="daily-goals-${counter.id}-list">
                         <!-- Cele dzienne będą załadowane później -->
                     </div>
-                    <p class="counter-category text-sm">${escapeHtml(counter.category || 'Bez kategorii')}</p>
                 </div>
                 <div class="text-center">
                     <span class="counter-value text-xl font-bold" id="counter-value-${counter.id}-list">${counter.value}${currencySymbol}</span>
@@ -272,7 +271,6 @@ function createCounterCard(counter, index, viewType = 'grid') {
                         <div class="daily-goals-container text-xs text-gray-400 mt-1" id="daily-goals-${counter.id}">
                             <!-- Cele dzienne będą załadowane później -->
                         </div>
-                        <p class="counter-category">${escapeHtml(counter.category || 'Bez kategorii')}</p>
                     </div>
                     <div class="relative">
                         <button onclick="toggleCounterMenu(${counter.id})" class="text-gray-400 hover:text-white" title="Menu">
@@ -1228,13 +1226,13 @@ function updateDailyGoalsDisplay() {
             if (goalContainer) {
                 if (dailyGoal && typeof dailyGoal === 'object') {
                     const personalGoalText = dailyGoal.current >= dailyGoal.total ? 
-                        `✅ Osobisty: ${dailyGoal.current}/${dailyGoal.total}` : 
-                        `Osobisty: ${dailyGoal.current}/${dailyGoal.total}`;
+                        `✅ Cel: ${dailyGoal.current}/${dailyGoal.total}` : 
+                        `Cel: ${dailyGoal.current}/${dailyGoal.total}`;
                     
-                    let goalHtml = `<div>${personalGoalText}</div>`;
+                    let goalHtml = `<div class="daily-goal">${personalGoalText}</div>`;
                     
                     if (dailyGoal.teamDaily > 0) {
-                        goalHtml += `<div>Zespół: ${dailyGoal.teamDaily}</div>`;
+                        goalHtml += `<div class="daily-goal">Zespół: ${dailyGoal.teamDaily}</div>`;
                     }
                     
                     goalContainer.innerHTML = goalHtml;
