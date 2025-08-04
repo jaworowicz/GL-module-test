@@ -45,9 +45,14 @@ function getTemplates() {
         mkdir($templatesDir, 0755, true);
     }
 
-    $templates = [];
+    // Utwórz domyślny szablon jeśli brak jakichkolwiek szablonów
     $files = glob($templatesDir . '*.json');
+    if (empty($files)) {
+        createDefaultTemplate($templatesDir);
+        $files = glob($templatesDir . '*.json');
+    }
 
+    $templates = [];
     foreach ($files as $file) {
         $data = json_decode(file_get_contents($file), true);
         if ($data) {
@@ -61,6 +66,21 @@ function getTemplates() {
     }
 
     return ['success' => true, 'templates' => $templates];
+}
+
+function createDefaultTemplate($templatesDir) {
+    $defaultHtml = file_get_contents(__DIR__ . '/../attached_assets/Pasted--DOCTYPE-html-html-lang-pl-head-meta-charset-UTF-8-meta-name-viewport-content-1754279661512_1754279661513.txt');
+    
+    $defaultTemplate = [
+        'id' => 'default_daily_report',
+        'name' => 'Domyślny Raport Dzienny',
+        'description' => 'Podstawowy szablon raportu dziennego z kolorowaniem według celów',
+        'html_content' => $defaultHtml,
+        'created' => date('Y-m-d H:i:s'),
+        'updated' => date('Y-m-d H:i:s')
+    ];
+    
+    file_put_contents($templatesDir . 'default_daily_report.json', json_encode($defaultTemplate, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
 function getTemplate($templateId) {
