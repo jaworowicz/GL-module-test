@@ -1,51 +1,87 @@
 
 <?php
 // Plik: /modules/to-do/widget.php
-// Niezależny widget To-Do dla kafelków dashboard
+// Widget responsywny dla modułu To-Do
 
-// Sprawdź czy widget jest wywoływany z odpowiednim kontekstem
-if (!defined('WIDGET_CONTEXT')) {
-    require_once __DIR__.'/../../includes/auth.php';
-    require_once __DIR__.'/../../includes/db.php';
-    
-    if (!is_logged_in()) {
-        echo '<div class="todo-widget-error">Wymagane logowanie</div>';
-        return;
-    }
-    
-    $current_user = get_current_user();
-    $user_id = $current_user['id'];
+require_once __DIR__.'/../../includes/db.php';
+
+// Sprawdź czy użytkownik jest zalogowany
+if (!isset($_SESSION['user_id'])) {
+    echo '<div class="todo-widget-error">Musisz być zalogowany</div>';
+    return;
 }
 
-// Pobierz zadania dla aktualnego użytkownika
+$user_id = $_SESSION['user_id'];
+
 try {
+    // Pobierz zadania dla aktualnego użytkownika
     $query = "
-        SELECT id, title, description, assignment_type, status, priority
-        FROM todo_tasks 
-        WHERE deleted_at IS NULL 
-        AND status != 'completed'
+        SELECT t.*, CONCAT(e.first_name, ' ', e.last_name) as assigned_user_name
+        FROM todo_tasks t
+        LEFT JOIN employees e ON t.assigned_user = e.id
+        WHERE t.deleted_at IS NULL 
+        AND t.status_id != 4
         AND (
-            (assignment_type = 'self' AND assigned_user = ?) OR
-            (assignment_type = 'user' AND assigned_user = ?) OR
-            (assignment_type = 'global')
+            t.assignment_type = 'global' 
+            OR (t.assignment_type = 'user' AND t.assigned_user = ?)
+            OR (t.assignment_type = 'self' AND t.assigned_user = ?)
         )
         ORDER BY 
-            CASE priority 
-                WHEN 'high' THEN 1 
-                WHEN 'medium' THEN 2 
-                WHEN 'low' THEN 3 
+            CASE 
+                WHEN t.due_date IS NOT NULL AND t.due_date <= CURDATE() THEN 1
+                WHEN t.due_date IS NOT NULL AND t.due_date <= DATE_ADD(CURDATE(), INTERVAL 1 DAY) THEN 2
+                ELSE 3
             END,
-            created_at DESC
-        LIMIT 5
+            t.created_at DESC
+        LIMIT 10
     ";
-    
     $stmt = $pdo->prepare($query);
     $stmt->execute([$user_id, $user_id]);
     $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
+    error_log('Todo Widget Error: ' . $e->getMessage());
     $tasks = [];
-    error_log('Błąd widget To-Do: ' . $e->getMessage());
+}
+
+// Funkcja pomocnicza do formatowania dat
+function formatDueDateWidget($dateString) {
+    if (!$dateString) return '';
+    $date = new DateTime($dateString);
+    $today = new DateTime();
+    $today->setTime(0, 0, 0);
+    $date->setTime(0, 0, 0);
+    
+    $diff = $today->diff($date);
+    $diffDays = (int)$diff->format('%r%a');
+    
+    if ($diffDays < 0) {
+        return 'Przeterminowane (' . abs($diffDays) . ' dni)';
+    } else if ($diffDays === 0) {
+        return 'Dziś ostatni dzień!';
+    } else if ($diffDays === 1) {
+        return 'Jutro';
+    } else {
+        return 'Za ' . $diffDays . ' dni';
+    }
+}
+
+function getDueDateClassWidget($dateString) {
+    if (!$dateString) return '';
+    $date = new DateTime($dateString);
+    $today = new DateTime();
+    $today->setTime(0, 0, 0);
+    $date->setTime(0, 0, 0);
+    
+    $diff = $today->diff($date);
+    $diffDays = (int)$diff->format('%r%a');
+    
+    if ($diffDays < 0) {
+        return 'due-overdue';
+    } else if ($diffDays === 0) {
+        return 'due-today';
+    }
+    return '';
 }
 ?>
 
@@ -54,10 +90,9 @@ try {
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid rgb(51, 65, 85);
     border-radius: 12px;
-    padding: 15px;
-    height: 100%;
+    padding: 16px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -96,13 +131,70 @@ try {
     transform: translateX(2px);
 }
 
+.todo-widget-task.due-today {
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.todo-widget-task.due-overdue {
+    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Custom Checkbox pro widget */
 .todo-widget-checkbox {
+    position: relative;
+    display: inline-block;
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: #34d399;
     margin-top: 2px;
     flex-shrink: 0;
+}
+
+.todo-widget-checkbox input {
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.todo-widget-checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    background: rgba(55, 65, 81, 0.8);
+    border: 2px solid #4b5563;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.todo-widget-checkbox input:checked + .todo-widget-checkmark {
+    background: #34d399;
+    border-color: #34d399;
+    transform: scale(1.1);
+}
+
+.todo-widget-checkmark::after {
+    content: '';
+    position: absolute;
+    display: none;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.todo-widget-checkbox input:checked + .todo-widget-checkmark::after {
+    display: block;
 }
 
 .todo-widget-task-content {
@@ -127,6 +219,23 @@ try {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.todo-widget-task-due {
+    color: #94a3b8;
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.todo-widget-task-due.due-today {
+    color: #f59e0b;
+    font-weight: bold;
+}
+
+.todo-widget-task-due.due-overdue {
+    color: #ef4444;
+    font-weight: bold;
 }
 
 .todo-widget-priority {
@@ -205,10 +314,19 @@ try {
             </div>
         <?php else: ?>
             <?php foreach ($tasks as $task): ?>
-                <div class="todo-widget-task">
-                    <input type="checkbox" 
-                           class="todo-widget-checkbox" 
-                           onchange="completeTaskFromWidget(<?php echo $task['id']; ?>, this.checked)">
+                <?php 
+                    $dueDateClass = getDueDateClassWidget($task['due_date']);
+                    $taskClasses = 'todo-widget-task';
+                    if ($dueDateClass) {
+                        $taskClasses .= ' ' . $dueDateClass;
+                    }
+                ?>
+                <div class="<?php echo $taskClasses; ?>">
+                    <label class="todo-widget-checkbox">
+                        <input type="checkbox" 
+                               onchange="completeTaskFromWidget(<?php echo $task['id']; ?>, this.checked)">
+                        <span class="todo-widget-checkmark"></span>
+                    </label>
                     
                     <div class="todo-widget-task-content">
                         <div class="todo-widget-task-title">
@@ -217,6 +335,11 @@ try {
                         <?php if (!empty($task['description'])): ?>
                             <div class="todo-widget-task-desc">
                                 <?php echo htmlspecialchars($task['description']); ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($task['due_date']): ?>
+                            <div class="todo-widget-task-due <?php echo $dueDateClass; ?>">
+                                <i class="fas fa-calendar"></i> <?php echo formatDueDateWidget($task['due_date']); ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -237,31 +360,36 @@ try {
 
 <script>
 async function completeTaskFromWidget(taskId, isCompleted) {
-    if (!isCompleted) return; // Widget tylko do oznaczania jako wykonane
-    
     try {
+        const newStatus = isCompleted ? 'completed' : 'new';
         const response = await fetch('/modules/to-do/ajax_handler.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `action=update_task_status&task_id=${taskId}&status=completed`
+            body: `action=update_task_status&task_id=${taskId}&status=${newStatus}`
         });
         
         const data = await response.json();
         
         if (data.success) {
-            // Odśwież widget lub usuń zadanie z widoku
-            location.reload();
+            // Opcjonalnie: odśwież widget lub usuń zadanie z listy
+            if (isCompleted) {
+                const taskElement = event.target.closest('.todo-widget-task');
+                taskElement.style.opacity = '0.5';
+                setTimeout(() => {
+                    taskElement.remove();
+                }, 300);
+            }
         } else {
-            console.error('Błąd oznaczania zadania:', data.message);
-            // Cofnij checkbox
-            event.target.checked = false;
+            // Przywróć poprzedni stan checkboxa w przypadku błędu
+            event.target.checked = !isCompleted;
+            console.error('Błąd aktualizacji zadania:', data.message);
         }
     } catch (error) {
+        // Przywróć poprzedni stan checkboxa w przypadku błędu
+        event.target.checked = !isCompleted;
         console.error('Błąd połączenia:', error);
-        // Cofnij checkbox
-        event.target.checked = false;
     }
 }
 </script>

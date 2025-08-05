@@ -4,6 +4,8 @@ let tasks = [];
 let editingTaskId = null;
 let currentUser = window.appData?.currentUser?.id || 1;
 let confirmCallback = null;
+let dragStartTime = 0;
+let isDragging = false;
 
 // Inicjalizacja
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,6 +17,46 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFilters();
     setupTouchEvents();
 });
+
+// Funkcje pomocnicze dla dat
+function formatDueDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    
+    const diffTime = date - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+        return `Przeterminowane (${Math.abs(diffDays)} dni)`;
+    } else if (diffDays === 0) {
+        return 'Dziś ostatni dzień!';
+    } else if (diffDays === 1) {
+        return 'Jutro';
+    } else {
+        return `Za ${diffDays} dni`;
+    }
+}
+
+function getDueDateClass(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    
+    const diffTime = date - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+        return 'due-overdue';
+    } else if (diffDays === 0) {
+        return 'due-today';
+    }
+    return '';
+}
 
 // Ładowanie użytkowników z bazy danych
 async function loadUsers() {
@@ -80,7 +122,11 @@ async function loadTasks() {
         const data = await response.json();
         
         if (data.success) {
-            tasks = data.tasks;
+            tasks = data.tasks.map(task => ({
+                ...task,
+                // Mapowanie ID statusów na nazwy
+                status: ['', 'new', 'in-progress', 'returned', 'completed'][task.status_id] || 'new'
+            }));
         } else {
             console.error('Błąd ładowania zadań:', data.message);
             tasks = [];
@@ -129,7 +175,7 @@ function getFilteredTasks() {
 
     return tasks.filter(task => {
         // Filtr lokalizacji
-        if (locationFilter !== 'all' && task.location !== locationFilter) {
+        if (locationFilter !== 'all' && task.sfid_id !== locationFilter) {
             return false;
         }
 
@@ -161,24 +207,36 @@ function createTaskElement(task) {
         'self': 'Własne'
     }[task.assignment_type];
 
-    const userName = task.assigned_user ? getUserName(task.assigned_user) : 'Wszyscy';
+    const userName = task.assigned_user_name || 'Wszyscy';
+    const dueDateClass = getDueDateClass(task.due_date);
+    
+    if (dueDateClass) {
+        taskDiv.classList.add(dueDateClass);
+    }
+
+    const dueDateHtml = task.due_date ? `
+        <div class="task-due-date ${dueDateClass}">
+            <i class="fas fa-calendar"></i> ${formatDueDate(task.due_date)}
+        </div>
+    ` : '';
 
     taskDiv.innerHTML = `
         <div class="task-priority priority-${task.priority}"></div>
         <div class="task-title">${escapeHtml(task.title)}</div>
-        <div class="task-description">${escapeHtml(task.description)}</div>
+        <div class="task-description">${escapeHtml(task.description || '')}</div>
         <div class="task-meta">
             <div class="task-assignee">
                 <span class="assignee-type ${assignmentTypeClass}">${assignmentTypeText}</span>
                 <span>${userName}</span>
             </div>
-            <div>ID: ${task.location}</div>
+            <div>ID: ${task.sfid_id || 'N/A'}</div>
         </div>
+        ${dueDateHtml}
         <div class="task-actions">
-            <button class="task-action-btn btn-edit" onclick="editTask(${task.id})">
+            <button class="task-action-btn btn-edit" onclick="event.stopPropagation(); editTask(${task.id})">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="task-action-btn btn-delete" onclick="deleteTask(${task.id})">
+            <button class="task-action-btn btn-delete" onclick="event.stopPropagation(); deleteTask(${task.id})">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -195,6 +253,7 @@ function getUserName(userId) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -232,10 +291,11 @@ function openTaskModal(taskId = null) {
         const task = tasks.find(t => t.id === taskId);
         if (task) {
             document.getElementById('taskTitle').value = task.title;
-            document.getElementById('taskDescription').value = task.description;
+            document.getElementById('taskDescription').value = task.description || '';
             document.getElementById('taskAssignmentType').value = task.assignment_type;
             document.getElementById('taskAssignedUser').value = task.assigned_user || '';
-            document.getElementById('taskLocation').value = task.location;
+            document.getElementById('taskLocation').value = task.sfid_id || '';
+            document.getElementById('taskDueDate').value = task.due_date || '';
             document.getElementById('taskPriority').value = task.priority;
             document.getElementById('taskStatus').value = task.status;
             toggleUserSelect();
@@ -243,7 +303,7 @@ function openTaskModal(taskId = null) {
     } else {
         title.textContent = 'Dodaj nowe zadanie';
         document.getElementById('taskForm').reset();
-        document.getElementById('taskLocation').value = window.appData.currentUser.sfid || '20004014';
+        document.getElementById('taskLocation').value = window.appData?.currentUser?.sfid || '20004014';
     }
     
     modal.style.display = 'block';
@@ -275,6 +335,7 @@ document.getElementById('taskForm').addEventListener('submit', async function(e)
         assignment_type: document.getElementById('taskAssignmentType').value,
         assigned_user: document.getElementById('taskAssignedUser').value || null,
         location: document.getElementById('taskLocation').value,
+        due_date: document.getElementById('taskDueDate').value || null,
         priority: document.getElementById('taskPriority').value,
         status: document.getElementById('taskStatus').value
     };
@@ -355,7 +416,7 @@ async function deleteTask(taskId) {
     });
 }
 
-// Drag & Drop with mobile support
+// Drag & Drop with improved mobile support
 let draggedElement = null;
 let initialX = 0;
 let initialY = 0;
@@ -384,7 +445,10 @@ function setupTouchEvents() {
 
 function handleTouchStart(e) {
     const target = e.target.closest('.task-card');
-    if (target) {
+    if (target && !e.target.closest('.task-action-btn')) {
+        dragStartTime = Date.now();
+        isDragging = false;
+        
         draggedElement = target;
         const touch = e.touches[0];
         initialX = touch.clientX;
@@ -392,44 +456,72 @@ function handleTouchStart(e) {
         currentX = touch.clientX;
         currentY = touch.clientY;
         
-        target.classList.add('dragging');
-        target.style.position = 'fixed';
-        target.style.zIndex = '1000';
-        target.style.pointerEvents = 'none';
-        target.style.transform = 'rotate(3deg) scale(1.05)';
-        
-        e.preventDefault();
+        // Opóźnienie przed rozpoczęciem przeciągania
+        setTimeout(() => {
+            if (draggedElement && !isDragging) {
+                isDragging = true;
+                target.classList.add('dragging', 'mobile-drag-mode');
+                target.style.position = 'fixed';
+                target.style.zIndex = '1000';
+                target.style.pointerEvents = 'none';
+                target.style.transform = 'rotate(3deg) scale(1.05)';
+                target.style.left = (currentX - 50) + 'px';
+                target.style.top = (currentY - 50) + 'px';
+            }
+        }, 200);
     }
 }
 
 function handleTouchMove(e) {
     if (!draggedElement) return;
     
-    e.preventDefault();
     const touch = e.touches[0];
     currentX = touch.clientX;
     currentY = touch.clientY;
     
-    draggedElement.style.left = (currentX - 50) + 'px';
-    draggedElement.style.top = (currentY - 50) + 'px';
+    const deltaX = Math.abs(currentX - initialX);
+    const deltaY = Math.abs(currentY - initialY);
     
-    // Znajdź kolumnę pod palcem
-    const elementBelow = document.elementFromPoint(currentX, currentY);
-    const dropZone = elementBelow?.closest('.drop-zone');
+    // Rozpocznij przeciąganie jeśli ruch jest większy niż 10px
+    if ((deltaX > 10 || deltaY > 10) && !isDragging) {
+        isDragging = true;
+        draggedElement.classList.add('dragging', 'mobile-drag-mode');
+        draggedElement.style.position = 'fixed';
+        draggedElement.style.zIndex = '1000';
+        draggedElement.style.pointerEvents = 'none';
+        draggedElement.style.transform = 'rotate(3deg) scale(1.05)';
+    }
     
-    // Usuń poprzednie podświetlenia
-    document.querySelectorAll('.drop-zone').forEach(zone => {
-        zone.classList.remove('drag-over');
-    });
-    
-    // Dodaj podświetlenie do aktualnej kolumny
-    if (dropZone) {
-        dropZone.classList.add('drag-over');
+    if (isDragging) {
+        e.preventDefault();
+        
+        draggedElement.style.left = (currentX - 50) + 'px';
+        draggedElement.style.top = (currentY - 50) + 'px';
+        
+        // Znajdź kolumnę pod palcem
+        const elementBelow = document.elementFromPoint(currentX, currentY);
+        const dropZone = elementBelow?.closest('.drop-zone');
+        
+        // Usuń poprzednie podświetlenia
+        document.querySelectorAll('.drop-zone').forEach(zone => {
+            zone.classList.remove('drag-over');
+        });
+        
+        // Dodaj podświetlenie do aktualnej kolumny
+        if (dropZone) {
+            dropZone.classList.add('drag-over');
+        }
     }
 }
 
 async function handleTouchEnd(e) {
     if (!draggedElement) return;
+    
+    // Jeśli nie było przeciągania, pozwól na normalne kliknięcia
+    if (!isDragging) {
+        draggedElement = null;
+        return;
+    }
     
     e.preventDefault();
     
@@ -448,7 +540,7 @@ async function handleTouchEnd(e) {
     }
     
     // Przywróć element do normalnego stanu
-    draggedElement.classList.remove('dragging');
+    draggedElement.classList.remove('dragging', 'mobile-drag-mode');
     draggedElement.style.position = '';
     draggedElement.style.zIndex = '';
     draggedElement.style.pointerEvents = '';
@@ -462,6 +554,7 @@ async function handleTouchEnd(e) {
     });
     
     draggedElement = null;
+    isDragging = false;
 }
 
 function handleDragStart(e) {
@@ -548,12 +641,27 @@ function renderWidget() {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'widget-task';
         
+        const dueDateClass = getDueDateClass(task.due_date);
+        if (dueDateClass) {
+            taskDiv.classList.add(dueDateClass);
+        }
+        
+        const dueDateHtml = task.due_date ? `
+            <div class="widget-task-due ${dueDateClass}">
+                ${formatDueDate(task.due_date)}
+            </div>
+        ` : '';
+        
         taskDiv.innerHTML = `
-            <input type="checkbox" class="widget-checkbox" ${task.status === 'completed' ? 'checked' : ''} 
-                   onchange="toggleTaskCompletion(${task.id}, this.checked)">
+            <label class="custom-checkbox">
+                <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} 
+                       onchange="toggleTaskCompletion(${task.id}, this.checked)">
+                <span class="checkbox-checkmark"></span>
+            </label>
             <div class="widget-task-text ${task.status === 'completed' ? 'completed' : ''}">
                 <strong>${escapeHtml(task.title)}</strong>
-                <small>${escapeHtml(task.description)}</small>
+                <small>${escapeHtml(task.description || '')}</small>
+                ${dueDateHtml}
             </div>
             <span class="assignee-type type-${task.assignment_type}">${task.assignment_type}</span>
         `;

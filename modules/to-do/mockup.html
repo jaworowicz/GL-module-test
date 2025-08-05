@@ -201,6 +201,16 @@
             z-index: 1000;
         }
 
+        .task-card.due-today {
+            border-left: 4px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .task-card.due-overdue {
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
         .task-priority {
             position: absolute;
             top: 8px;
@@ -256,6 +266,22 @@
         .type-user { background: #059669; color: white; }
         .type-self { background: #dc2626; color: white; }
 
+        .task-due-date {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .task-due-today {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .task-due-overdue {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
         .task-actions {
             display: flex;
             gap: 5px;
@@ -274,6 +300,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10;
+            position: relative;
         }
 
         .btn-edit {
@@ -406,11 +434,68 @@
             transform: translateX(4px);
         }
 
-        .widget-checkbox {
+        .widget-task.due-today {
+            border-left: 3px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .widget-task.due-overdue {
+            border-left: 3px solid #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Custom Checkbox */
+        .custom-checkbox {
+            position: relative;
+            display: inline-block;
             width: 20px;
             height: 20px;
             cursor: pointer;
-            accent-color: #34d399;
+        }
+
+        .custom-checkbox input {
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background: rgba(55, 65, 81, 0.8);
+            border: 2px solid #4b5563;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-checkbox input:checked + .checkbox-checkmark {
+            background: #34d399;
+            border-color: #34d399;
+            transform: scale(1.1);
+        }
+
+        .checkbox-checkmark::after {
+            content: '';
+            position: absolute;
+            display: none;
+            width: 6px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .custom-checkbox input:checked + .checkbox-checkmark::after {
+            display: block;
         }
 
         .widget-task-text {
@@ -427,6 +512,22 @@
         .widget-task-text small {
             color: #cbd5e1;
             line-height: 1.3;
+        }
+
+        .widget-task-due {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .widget-task-due.due-today {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .widget-task-due.due-overdue {
+            color: #ef4444;
+            font-weight: bold;
         }
 
         .completed {
@@ -546,6 +647,15 @@
                 padding: 8px;
                 min-width: 36px;
                 min-height: 36px;
+                pointer-events: auto;
+            }
+
+            .task-card.mobile-drag-mode .task-actions {
+                pointer-events: none;
+            }
+
+            .task-card.mobile-drag-mode .task-action-btn {
+                pointer-events: none;
             }
 
             .modal-content {
@@ -695,6 +805,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Termin wykonania</label>
+                    <input type="date" id="taskDueDate" class="form-input">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Priorytet</label>
                     <select id="taskPriority" class="form-select">
                         <option value="low">Niski</option>
@@ -748,6 +862,8 @@
         let editingTaskId = null;
         let currentUser = 1; // Symulacja aktualnego użytkownika
         let confirmCallback = null;
+        let dragStartTime = 0;
+        let isDragging = false;
 
         // Inicjalizacja
         document.addEventListener('DOMContentLoaded', function() {
@@ -778,13 +894,59 @@
             closeConfirmModal();
         });
 
+        // Funkcje pomocnicze dla dat
+        function formatDueDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            date.setHours(0, 0, 0, 0);
+            
+            const diffTime = date - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                return `Przeterminowane (${Math.abs(diffDays)} dni)`;
+            } else if (diffDays === 0) {
+                return 'Dziś ostatni dzień!';
+            } else if (diffDays === 1) {
+                return 'Jutro';
+            } else {
+                return `Za ${diffDays} dni`;
+            }
+        }
+
+        function getDueDateClass(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            date.setHours(0, 0, 0, 0);
+            
+            const diffTime = date - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                return 'due-overdue';
+            } else if (diffDays === 0) {
+                return 'due-today';
+            }
+            return '';
+        }
+
         // Zarządzanie zadaniami
         function loadTasks() {
             const savedTasks = localStorage.getItem('kanban_tasks');
             if (savedTasks) {
                 tasks = JSON.parse(savedTasks);
             } else {
-                // Przykładowe zadania
+                // Przykładowe zadania z terminami
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(today.getDate() + 1);
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                
                 tasks = [
                     {
                         id: 1,
@@ -795,6 +957,7 @@
                         location: '20004014',
                         priority: 'high',
                         status: 'new',
+                        dueDate: today.toISOString().split('T')[0],
                         createdBy: 1,
                         createdAt: new Date().toISOString()
                     },
@@ -807,6 +970,7 @@
                         location: '20004014',
                         priority: 'medium',
                         status: 'in-progress',
+                        dueDate: tomorrow.toISOString().split('T')[0],
                         createdBy: 1,
                         createdAt: new Date().toISOString()
                     },
@@ -819,6 +983,7 @@
                         location: '20004014',
                         priority: 'low',
                         status: 'completed',
+                        dueDate: yesterday.toISOString().split('T')[0],
                         createdBy: 1,
                         createdAt: new Date().toISOString()
                     }
@@ -896,6 +1061,17 @@
             }[task.assignmentType];
 
             const userName = task.assignedUser ? getUserName(task.assignedUser) : 'Wszyscy';
+            const dueDateClass = getDueDateClass(task.dueDate);
+            
+            if (dueDateClass) {
+                taskDiv.classList.add(dueDateClass);
+            }
+
+            const dueDateHtml = task.dueDate ? `
+                <div class="task-due-date ${dueDateClass}">
+                    <i class="fas fa-calendar"></i> ${formatDueDate(task.dueDate)}
+                </div>
+            ` : '';
 
             taskDiv.innerHTML = `
                 <div class="task-priority priority-${task.priority}"></div>
@@ -908,11 +1084,12 @@
                     </div>
                     <div>ID: ${task.location}</div>
                 </div>
+                ${dueDateHtml}
                 <div class="task-actions">
-                    <button class="task-action-btn btn-edit" onclick="editTask(${task.id})">
+                    <button class="task-action-btn btn-edit" onclick="event.stopPropagation(); editTask(${task.id})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="task-action-btn btn-delete" onclick="deleteTask(${task.id})">
+                    <button class="task-action-btn btn-delete" onclick="event.stopPropagation(); deleteTask(${task.id})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -966,6 +1143,7 @@
                     document.getElementById('taskAssignmentType').value = task.assignmentType;
                     document.getElementById('taskAssignedUser').value = task.assignedUser || '';
                     document.getElementById('taskLocation').value = task.location;
+                    document.getElementById('taskDueDate').value = task.dueDate || '';
                     document.getElementById('taskPriority').value = task.priority;
                     document.getElementById('taskStatus').value = task.status;
                     toggleUserSelect();
@@ -1004,6 +1182,7 @@
                 assignmentType: document.getElementById('taskAssignmentType').value,
                 assignedUser: document.getElementById('taskAssignedUser').value || null,
                 location: document.getElementById('taskLocation').value,
+                dueDate: document.getElementById('taskDueDate').value || null,
                 priority: document.getElementById('taskPriority').value,
                 status: document.getElementById('taskStatus').value
             };
@@ -1052,7 +1231,7 @@
             });
         }
 
-        // Drag & Drop with mobile support
+        // Drag & Drop with improved mobile support
         let draggedElement = null;
         let initialX = 0;
         let initialY = 0;
@@ -1081,7 +1260,10 @@
 
         function handleTouchStart(e) {
             const target = e.target.closest('.task-card');
-            if (target) {
+            if (target && !e.target.closest('.task-action-btn')) {
+                dragStartTime = Date.now();
+                isDragging = false;
+                
                 draggedElement = target;
                 const touch = e.touches[0];
                 initialX = touch.clientX;
@@ -1089,44 +1271,72 @@
                 currentX = touch.clientX;
                 currentY = touch.clientY;
                 
-                target.classList.add('dragging');
-                target.style.position = 'fixed';
-                target.style.zIndex = '1000';
-                target.style.pointerEvents = 'none';
-                target.style.transform = 'rotate(3deg) scale(1.05)';
-                
-                e.preventDefault();
+                // Opóźnienie przed rozpoczęciem przeciągania
+                setTimeout(() => {
+                    if (draggedElement && !isDragging) {
+                        isDragging = true;
+                        target.classList.add('dragging', 'mobile-drag-mode');
+                        target.style.position = 'fixed';
+                        target.style.zIndex = '1000';
+                        target.style.pointerEvents = 'none';
+                        target.style.transform = 'rotate(3deg) scale(1.05)';
+                        target.style.left = (currentX - 50) + 'px';
+                        target.style.top = (currentY - 50) + 'px';
+                    }
+                }, 200);
             }
         }
 
         function handleTouchMove(e) {
             if (!draggedElement) return;
             
-            e.preventDefault();
             const touch = e.touches[0];
             currentX = touch.clientX;
             currentY = touch.clientY;
             
-            draggedElement.style.left = (currentX - 50) + 'px';
-            draggedElement.style.top = (currentY - 50) + 'px';
+            const deltaX = Math.abs(currentX - initialX);
+            const deltaY = Math.abs(currentY - initialY);
             
-            // Znajdź kolumnę pod palcem
-            const elementBelow = document.elementFromPoint(currentX, currentY);
-            const dropZone = elementBelow?.closest('.drop-zone');
+            // Rozpocznij przeciąganie jeśli ruch jest większy niż 10px
+            if ((deltaX > 10 || deltaY > 10) && !isDragging) {
+                isDragging = true;
+                draggedElement.classList.add('dragging', 'mobile-drag-mode');
+                draggedElement.style.position = 'fixed';
+                draggedElement.style.zIndex = '1000';
+                draggedElement.style.pointerEvents = 'none';
+                draggedElement.style.transform = 'rotate(3deg) scale(1.05)';
+            }
             
-            // Usuń poprzednie podświetlenia
-            document.querySelectorAll('.drop-zone').forEach(zone => {
-                zone.classList.remove('drag-over');
-            });
-            
-            // Dodaj podświetlenie do aktualnej kolumny
-            if (dropZone) {
-                dropZone.classList.add('drag-over');
+            if (isDragging) {
+                e.preventDefault();
+                
+                draggedElement.style.left = (currentX - 50) + 'px';
+                draggedElement.style.top = (currentY - 50) + 'px';
+                
+                // Znajdź kolumnę pod palcem
+                const elementBelow = document.elementFromPoint(currentX, currentY);
+                const dropZone = elementBelow?.closest('.drop-zone');
+                
+                // Usuń poprzednie podświetlenia
+                document.querySelectorAll('.drop-zone').forEach(zone => {
+                    zone.classList.remove('drag-over');
+                });
+                
+                // Dodaj podświetlenie do aktualnej kolumny
+                if (dropZone) {
+                    dropZone.classList.add('drag-over');
+                }
             }
         }
 
         function handleTouchEnd(e) {
             if (!draggedElement) return;
+            
+            // Jeśli nie było przeciągania, pozwól na normalne kliknięcia
+            if (!isDragging) {
+                draggedElement = null;
+                return;
+            }
             
             e.preventDefault();
             
@@ -1148,7 +1358,7 @@
             }
             
             // Przywróć element do normalnego stanu
-            draggedElement.classList.remove('dragging');
+            draggedElement.classList.remove('dragging', 'mobile-drag-mode');
             draggedElement.style.position = '';
             draggedElement.style.zIndex = '';
             draggedElement.style.pointerEvents = '';
@@ -1162,6 +1372,7 @@
             });
             
             draggedElement = null;
+            isDragging = false;
         }
 
         function handleDragStart(e) {
@@ -1226,12 +1437,27 @@
                 const taskDiv = document.createElement('div');
                 taskDiv.className = 'widget-task';
                 
+                const dueDateClass = getDueDateClass(task.dueDate);
+                if (dueDateClass) {
+                    taskDiv.classList.add(dueDateClass);
+                }
+                
+                const dueDateHtml = task.dueDate ? `
+                    <div class="widget-task-due ${dueDateClass}">
+                        ${formatDueDate(task.dueDate)}
+                    </div>
+                ` : '';
+                
                 taskDiv.innerHTML = `
-                    <input type="checkbox" class="widget-checkbox" ${task.status === 'completed' ? 'checked' : ''} 
-                           onchange="toggleTaskCompletion(${task.id}, this.checked)">
+                    <label class="custom-checkbox">
+                        <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} 
+                               onchange="toggleTaskCompletion(${task.id}, this.checked)">
+                        <span class="checkbox-checkmark"></span>
+                    </label>
                     <div class="widget-task-text ${task.status === 'completed' ? 'completed' : ''}">
                         <strong>${task.title}</strong>
                         <small>${task.description}</small>
+                        ${dueDateHtml}
                     </div>
                     <span class="assignee-type type-${task.assignmentType}">${task.assignmentType}</span>
                 `;
