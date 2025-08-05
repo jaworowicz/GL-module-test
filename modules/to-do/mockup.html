@@ -23,7 +23,7 @@
             position: relative;
             overflow-x: hidden;
         }
-        
+
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -896,48 +896,45 @@
             </div>
         </div>
 
-        <!-- Dodaj białe tło pod kontenerami aby animacja była widoczna -->
-        <div style="background: transparent; border-radius: 16px; padding: 0; margin-top: 30px; box-shadow: none;">
-            <!-- Widget responsywny -->
-            <div class="widget-container">
-                <h3 class="widget-title">
-                    <i class="fas fa-list-check"></i> 
-                    Moje zadania do wykonania
-                </h3>
-                <div class="widget-tasks" id="widget-tasks"></div>
-            </div>
+        <!-- Widget responsywny -->
+        <div class="widget-container">
+            <h3 class="widget-title">
+                <i class="fas fa-list-check"></i> 
+                Moje zadania do wykonania
+            </h3>
+            <div class="widget-tasks" id="widget-tasks"></div>
+        </div>
 
-            <!-- Widget Administratora/Superadministratora -->
-            <div class="admin-widget-container" id="admin-widget">
-                <h3 class="admin-widget-title">
-                    <i class="fas fa-shield-alt"></i> 
-                    Panel Administratora / Superadministratora
-                </h3>
-                <div class="admin-stats-grid">
-                    <div class="admin-stat-card">
-                        <span class="admin-stat-value" id="stat-new">0</span>
-                        <span class="admin-stat-label">Nowe zadania</span>
-                    </div>
-                    <div class="admin-stat-card">
-                        <span class="admin-stat-value" id="stat-progress">0</span>
-                        <span class="admin-stat-label">W toku</span>
-                    </div>
-                    <div class="admin-stat-card">
-                        <span class="admin-stat-value" id="stat-returned">0</span>
-                        <span class="admin-stat-label">Zwrócone</span>
-                    </div>
-                    <div class="admin-stat-card">
-                        <span class="admin-stat-value" id="stat-completed">0</span>
-                        <span class="admin-stat-label">Zakończone</span>
-                    </div>
+        <!-- Widget Administratora/Superadministratora -->
+        <div class="admin-widget-container" id="admin-widget">
+            <h3 class="admin-widget-title">
+                <i class="fas fa-shield-alt"></i> 
+                Panel Administratora / Superadministratora
+            </h3>
+            <div class="admin-stats-grid">
+                <div class="admin-stat-card">
+                    <span class="admin-stat-value" id="stat-new">0</span>
+                    <span class="admin-stat-label">Nowe zadania</span>
                 </div>
-                <div class="admin-widget-title">
-                    <i class="fas fa-bell"></i> 
-                    Zadania wymagające uwagi
+                <div class="admin-stat-card">
+                    <span class="admin-stat-value" id="stat-progress">0</span>
+                    <span class="admin-stat-label">W toku</span>
                 </div>
-                <div class="admin-priority-tasks" id="admin-priority-tasks">
-                    <!-- Tutaj będą ładowane zadania wymagające uwagi -->
+                <div class="admin-stat-card">
+                    <span class="admin-stat-value" id="stat-returned">0</span>
+                    <span class="admin-stat-label">Zwrócone</span>
                 </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-value" id="stat-completed">0</span>
+                    <span class="admin-stat-label">Zakończone</span>
+                </div>
+            </div>
+            <div class="admin-widget-title">
+                <i class="fas fa-bell"></i> 
+                Zadania wymagające uwagi
+            </div>
+            <div class="admin-priority-tasks" id="admin-priority-tasks">
+                <!-- Tutaj będą ładowane zadania wymagające uwagi -->
             </div>
         </div>
     </div>
@@ -1060,7 +1057,6 @@
             renderTasks();
             renderWidget();
             setupDragAndDrop();
-            setupFilters();
             setupTouchEvents();
             // Ustawienie domyślnego filtra użytkownika na bieżącego użytkownika
             document.getElementById('userFilter').value = currentUser;
