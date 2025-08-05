@@ -596,6 +596,122 @@
             justify-content: center;
         }
 
+        /* Admin Widget Styles */
+        .admin-widget-container {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgb(51, 65, 85);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: none; /* Domyślnie ukryty, pokazany dla admina */
+        }
+
+        .admin-widget-title {
+            color: #34d399;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid rgb(51, 65, 85);
+            padding-bottom: 10px;
+        }
+
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .admin-stat-card {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .admin-stat-card:hover {
+            background: rgba(51, 65, 85, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .admin-stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .admin-stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .admin-priority-tasks {
+            margin-top: 20px;
+        }
+
+        .admin-priority-task {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .admin-priority-task:hover {
+            background: rgba(51, 65, 85, 0.8);
+            transform: translateX(4px);
+        }
+
+        .admin-task-icon {
+            font-size: 1rem;
+            width: 25px;
+            text-align: center;
+        }
+
+        .admin-task-content {
+            flex: 1;
+        }
+
+        .admin-task-title {
+            font-weight: bold;
+            color: #f8fafc;
+            margin-bottom: 3px;
+        }
+
+        .admin-task-meta {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .admin-task-status {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .status-new, .status-in-progress { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid #3b82f6; }
+        .status-returned { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #059669; border: 1px solid #059669; }
+        .status-overdue { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+
+        .priority-warning { /* Styl dla zadań do pilnego sprawdzenia */ }
+        .priority-urgent { /* Styl dla zadań krytycznych */ }
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -666,6 +782,12 @@
                 margin-top: 15px;
                 padding: 15px;
             }
+            .admin-widget-container {
+                padding: 15px;
+            }
+            .admin-stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         @media (max-width: 480px) {
@@ -681,6 +803,19 @@
             .btn {
                 padding: 15px;
                 font-size: 16px;
+            }
+            .admin-stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .admin-priority-task {
+                flex-wrap: wrap;
+                text-align: center;
+            }
+            .admin-task-icon, .admin-task-status {
+                margin-bottom: 5px;
+            }
+            .admin-task-meta {
+                display: block;
             }
         }
     </style>
@@ -754,7 +889,7 @@
         </div>
 
         <!-- Dodaj białe tło pod kontenerami aby animacja była widoczna -->
-        <div style="background: white; border-radius: 16px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+        <div style="background: transparent; border-radius: 16px; padding: 0; margin-top: 30px; box-shadow: none;">
             <!-- Widget responsywny -->
             <div class="widget-container">
                 <h3 class="widget-title">
@@ -762,6 +897,39 @@
                     Moje zadania do wykonania
                 </h3>
                 <div class="widget-tasks" id="widget-tasks"></div>
+            </div>
+
+            <!-- Widget Administratora/Superadministratora -->
+            <div class="admin-widget-container" id="admin-widget">
+                <h3 class="admin-widget-title">
+                    <i class="fas fa-shield-alt"></i> 
+                    Panel Administratora / Superadministratora
+                </h3>
+                <div class="admin-stats-grid">
+                    <div class="admin-stat-card">
+                        <span class="admin-stat-value" id="stat-new">0</span>
+                        <span class="admin-stat-label">Nowe zadania</span>
+                    </div>
+                    <div class="admin-stat-card">
+                        <span class="admin-stat-value" id="stat-progress">0</span>
+                        <span class="admin-stat-label">W toku</span>
+                    </div>
+                    <div class="admin-stat-card">
+                        <span class="admin-stat-value" id="stat-returned">0</span>
+                        <span class="admin-stat-label">Zwrócone</span>
+                    </div>
+                    <div class="admin-stat-card">
+                        <span class="admin-stat-value" id="stat-completed">0</span>
+                        <span class="admin-stat-label">Zakończone</span>
+                    </div>
+                </div>
+                <div class="admin-widget-title">
+                    <i class="fas fa-bell"></i> 
+                    Zadania wymagające uwagi
+                </div>
+                <div class="admin-priority-tasks" id="admin-priority-tasks">
+                    <!-- Tutaj będą ładowane zadania wymagające uwagi -->
+                </div>
             </div>
         </div>
     </div>
@@ -859,6 +1027,17 @@
     </div>
 
     <script>
+        // Helper function to escape HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         // Globalne zmienne
         let tasks = [];
         let editingTaskId = null;
@@ -875,6 +1054,12 @@
             setupDragAndDrop();
             setupFilters();
             setupTouchEvents();
+            // Ustawienie domyślnego filtra użytkownika na bieżącego użytkownika
+            document.getElementById('userFilter').value = currentUser;
+            // Symulacja admina dla demonstracji
+            if (currentUser === 1) { // Zakładamy, że użytkownik 1 to administrator
+                document.getElementById('admin-widget').style.display = 'block';
+            }
         });
 
         // Modal potwierdzenia
@@ -988,6 +1173,19 @@
                         dueDate: yesterday.toISOString().split('T')[0],
                         createdBy: 1,
                         createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 4,
+                        title: 'Korekta faktury nr 123/2024',
+                        description: 'Błąd w naliczonej kwocie VAT',
+                        assignmentType: 'user',
+                        assignedUser: 1,
+                        location: '20004015',
+                        priority: 'high',
+                        status: 'returned',
+                        dueDate: yesterday.toISOString().split('T')[0],
+                        createdBy: 2,
+                        createdAt: new Date().toISOString()
                     }
                 ];
                 saveTasks();
@@ -1037,10 +1235,16 @@
                 // Filtr użytkownika
                 if (userFilter !== 'all') {
                     const userId = parseInt(userFilter);
-                    if (task.assignmentType === 'user' && task.assignedUser !== userId) {
+                    // Zadanie jest widoczne, jeśli jest przypisane do wybranego użytkownika
+                    // lub jest typu globalne (widoczne dla wszystkich)
+                    if (task.assignmentType === 'global') {
+                        // Globalne zadania są widoczne dla wszystkich
+                    } else if (task.assignmentType === 'user' && task.assignedUser !== userId) {
                         return false;
-                    }
-                    if (task.assignmentType === 'self' && task.assignedUser !== userId) {
+                    } else if (task.assignmentType === 'self' && task.assignedUser !== userId) {
+                        return false;
+                    } else if (task.assignmentType !== 'self' && task.assignmentType !== 'user' && task.assignmentType !== 'global') {
+                         // Obsługa nieznanych typów przypisania, jeśli istnieją
                         return false;
                     }
                 }
@@ -1060,7 +1264,7 @@
                 'global': 'Globalne',
                 'user': 'Użytkownik',
                 'self': 'Własne'
-            }[task.assignmentType];
+            }[task.assignmentType] || task.assignmentType; // Fallback for safety
 
             const userName = task.assignedUser ? getUserName(task.assignedUser) : 'Wszyscy';
             const dueDateClass = getDueDateClass(task.dueDate);
@@ -1077,8 +1281,8 @@
 
             taskDiv.innerHTML = `
                 <div class="task-priority priority-${task.priority}"></div>
-                <div class="task-title">${task.title}</div>
-                <div class="task-description">${task.description}</div>
+                <div class="task-title">${escapeHtml(task.title)}</div>
+                <div class="task-description">${escapeHtml(task.description || '')}</div>
                 <div class="task-meta">
                     <div class="task-assignee">
                         <span class="assignee-type ${assignmentTypeClass}">${assignmentTypeText}</span>
@@ -1153,6 +1357,7 @@
             } else {
                 title.textContent = 'Dodaj nowe zadanie';
                 document.getElementById('taskForm').reset();
+                document.getElementById('userSelectGroup').style.display = 'none'; // Reset user select visibility
             }
 
             modal.style.display = 'block';
@@ -1184,7 +1389,7 @@
                 assignmentType: document.getElementById('taskAssignmentType').value,
                 assignedUser: document.getElementById('taskAssignedUser').value || null,
                 location: document.getElementById('taskLocation').value,
-                dueDate: document.getElementById('taskDueDate').value || null,
+                dueDate: document.getElementById('taskDueDate').value || '', // Changed to empty string if null
                 priority: document.getElementById('taskPriority').value,
                 status: document.getElementById('taskStatus').value
             };
@@ -1421,6 +1626,11 @@
 
         // Widget
         function renderWidget() {
+            renderUserWidget();
+            renderAdminWidget();
+        }
+
+        function renderUserWidget() {
             const widgetContainer = document.getElementById('widget-tasks');
             const myTasks = tasks.filter(task => {
                 // Filtruj zadania przypisane do użytkownika
@@ -1458,8 +1668,8 @@
                         <span class="checkbox-checkmark"></span>
                     </label>
                     <div class="widget-task-text ${task.status === 'completed' ? 'completed' : ''}">
-                        <strong>${task.title}</strong>
-                        <small>${task.description}</small>
+                        <strong>${escapeHtml(task.title)}</strong>
+                        <small>${escapeHtml(task.description || '')}</small>
                         ${dueDateHtml}
                     </div>
                     <span class="assignee-type type-${task.assignmentType}">${task.assignmentType}</span>
@@ -1469,10 +1679,115 @@
             });
         }
 
+        function renderAdminWidget() {
+            // Widget admina pokazuje się zawsze w mockup dla demonstracji
+            const adminWidget = document.getElementById('admin-widget');
+            // Sprawdzenie czy użytkownik jest adminem (tutaj zakładamy, że currentUser === 1 jest adminem)
+            if (currentUser === 1) {
+                adminWidget.style.display = 'block';
+            } else {
+                adminWidget.style.display = 'none';
+                return; // Jeśli nie jest adminem, nie renderujemy tego widgetu
+            }
+
+            // Statystyki
+            const stats = {
+                new: tasks.filter(t => t.status === 'new').length,
+                progress: tasks.filter(t => t.status === 'in-progress').length,
+                returned: tasks.filter(t => t.status === 'returned').length,
+                completed: tasks.filter(t => t.status === 'completed').length
+            };
+
+            document.getElementById('stat-new').textContent = stats.new;
+            document.getElementById('stat-progress').textContent = stats.progress;
+            document.getElementById('stat-returned').textContent = stats.returned;
+            document.getElementById('stat-completed').textContent = stats.completed;
+
+            // Zadania wymagające uwagi
+            const priorityTasks = tasks.filter(task => {
+                const dueDateClass = getDueDateClass(task.dueDate);
+                return task.status === 'returned' || dueDateClass === 'due-overdue' || dueDateClass === 'due-today';
+            });
+
+            const priorityContainer = document.getElementById('admin-priority-tasks');
+            priorityContainer.innerHTML = '';
+
+            if (priorityTasks.length === 0) {
+                priorityContainer.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 15px; font-size: 0.8rem;">Brak zadań wymagających uwagi</p>';
+                return;
+            }
+
+            priorityTasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'admin-priority-task';
+
+                const dueDateClass = getDueDateClass(task.dueDate);
+                let statusClass = '';
+                let icon = 'fas fa-info-circle';
+
+                if (task.status === 'returned') {
+                    statusClass = 'status-returned';
+                    icon = 'fas fa-undo';
+                } else if (dueDateClass === 'due-overdue') {
+                    statusClass = 'status-overdue';
+                    icon = 'fas fa-exclamation-triangle';
+                } else if (dueDateClass === 'due-today') {
+                    statusClass = 'status-warning'; // Placeholder, needs actual definition if used
+                    icon = 'fas fa-clock';
+                } else {
+                    // Default status for other cases if needed
+                    statusClass = 'status-new'; // Or 'status-in-progress'
+                }
+
+                // Ensure statusClass is one of the defined ones or a default
+                const validStatusClasses = ['status-new', 'status-in-progress', 'status-returned', 'status-completed', 'status-overdue'];
+                if (!validStatusClasses.includes(statusClass)) {
+                    // If the determined class isn't valid, assign a default based on task status
+                    if (task.status === 'new') statusClass = 'status-new';
+                    else if (task.status === 'in-progress') statusClass = 'status-in-progress';
+                    else if (task.status === 'completed') statusClass = 'status-completed';
+                    else statusClass = 'status-new'; // Fallback
+                }
+
+
+                const statusText = {
+                    'returned': 'Zwrócone',
+                    'new': 'Nowe',
+                    'in-progress': 'W toku',
+                    'completed': 'Zakończone'
+                }[task.status];
+
+                const assigneeText = task.assignmentType === 'global' ? 'Globalne' :
+                                   task.assignmentType === 'self' ? 'Własne' :
+                                   getUserName(task.assignedUser);
+
+                taskDiv.innerHTML = `
+                    <div class="admin-task-icon">
+                        <i class="${icon}"></i>
+                    </div>
+                    <div class="admin-task-content">
+                        <div class="admin-task-title">${escapeHtml(task.title)}</div>
+                        <div class="admin-task-meta">
+                            ${assigneeText} • ${task.location || 'Brak lokalizacji'}
+                            ${task.dueDate ? ' • ' + formatDueDate(task.dueDate) : ''}
+                        </div>
+                    </div>
+                    <div class="admin-task-status ${statusClass}">${statusText}</div>
+                `;
+
+                priorityContainer.appendChild(taskDiv);
+            });
+        }
+
+
+        // This function needs to be defined as it's called in the HTML.
+        // It's likely intended to update the task's status in the main list
+        // and in the widget.
         function toggleTaskCompletion(taskId, isCompleted) {
             const task = tasks.find(t => t.id === taskId);
             if (task) {
-                task.status = isCompleted ? 'completed' : 'new';
+                // Changed logic: if unchecked, it goes to 'returned', not 'new'
+                task.status = isCompleted ? 'completed' : 'returned';
                 saveTasks();
                 renderTasks();
                 renderWidget();

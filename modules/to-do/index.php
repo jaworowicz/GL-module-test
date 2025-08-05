@@ -155,6 +155,40 @@ try {
         <div class="widget-tasks" id="widget-tasks"></div>
     </div>
 
+    <!-- Widget dla adminów -->
+    <?php if ($user_role === 'admin' || $user_role === 'superadmin'): ?>
+    <div class="widget-container" id="admin-widget" style="margin-top: 20px;">
+        <h3 class="widget-title">
+            <i class="fas fa-shield-alt"></i> 
+            Panel administratora - Kontrola zadań
+        </h3>
+        <div class="admin-widget-stats" id="admin-stats">
+            <div class="admin-stat-card">
+                <div class="admin-stat-number" id="stat-new">0</div>
+                <div class="admin-stat-label">Nowe</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-number" id="stat-progress">0</div>
+                <div class="admin-stat-label">W toku</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-number" id="stat-returned">0</div>
+                <div class="admin-stat-label">Zwrócone</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-number" id="stat-completed">0</div>
+                <div class="admin-stat-label">Zakończone</div>
+            </div>
+        </div>
+        <div class="admin-widget-tasks" id="admin-widget-tasks">
+            <h4 style="color: #f59e0b; margin: 15px 0 10px 0; font-size: 0.9rem;">
+                <i class="fas fa-exclamation-triangle"></i> Zadania wymagające uwagi
+            </h4>
+            <div id="admin-priority-tasks"></div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Modal dodawania/edycji zadania -->
     <div id="taskModal" class="modal">
         <div class="modal-content">

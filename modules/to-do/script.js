@@ -623,6 +623,13 @@ async function updateTaskStatus(taskId, newStatus) {
 
 // Widget
 function renderWidget() {
+    renderUserWidget();
+    if (window.appData?.isAdmin) {
+        renderAdminWidget();
+    }
+}
+
+function renderUserWidget() {
     const widgetContainer = document.getElementById('widget-tasks');
     const myTasks = tasks.filter(task => {
         // Filtruj zadania przypisane do użytkownika
@@ -671,8 +678,102 @@ function renderWidget() {
     });
 }
 
+function renderAdminWidget() {
+    const adminWidget = document.getElementById('admin-widget');
+    if (!adminWidget) return;
+    
+    adminWidget.style.display = 'block';
+
+    // Statystyki
+    const stats = {
+        new: tasks.filter(t => t.status === 'new').length,
+        progress: tasks.filter(t => t.status === 'in-progress').length,
+        returned: tasks.filter(t => t.status === 'returned').length,
+        completed: tasks.filter(t => t.status === 'completed').length
+    };
+
+    const statNew = document.getElementById('stat-new');
+    const statProgress = document.getElementById('stat-progress');
+    const statReturned = document.getElementById('stat-returned');
+    const statCompleted = document.getElementById('stat-completed');
+
+    if (statNew) statNew.textContent = stats.new;
+    if (statProgress) statProgress.textContent = stats.progress;
+    if (statReturned) statReturned.textContent = stats.returned;
+    if (statCompleted) statCompleted.textContent = stats.completed;
+
+    // Zadania wymagające uwagi
+    const priorityTasks = tasks.filter(task => {
+        const dueDateClass = getDueDateClass(task.due_date);
+        return task.status === 'returned' || dueDateClass === 'due-overdue' || dueDateClass === 'due-today';
+    });
+
+    const priorityContainer = document.getElementById('admin-priority-tasks');
+    if (!priorityContainer) return;
+    
+    priorityContainer.innerHTML = '';
+
+    if (priorityTasks.length === 0) {
+        priorityContainer.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 15px; font-size: 0.8rem;">Brak zadań wymagających uwagi</p>';
+        return;
+    }
+
+    priorityTasks.forEach(task => {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'admin-priority-task';
+        
+        const dueDateClass = getDueDateClass(task.due_date);
+        let priorityClass = '';
+        let icon = 'fas fa-info-circle';
+        
+        if (task.status === 'returned') {
+            priorityClass = 'priority-warning';
+            icon = 'fas fa-undo';
+        } else if (dueDateClass === 'due-overdue') {
+            priorityClass = 'priority-urgent';
+            icon = 'fas fa-exclamation-triangle';
+        } else if (dueDateClass === 'due-today') {
+            priorityClass = 'priority-warning';
+            icon = 'fas fa-clock';
+        }
+        
+        if (priorityClass) {
+            taskDiv.classList.add(priorityClass);
+        }
+        
+        const statusText = {
+            'returned': 'Zwrócone',
+            'new': 'Nowe',
+            'in-progress': 'W toku',
+            'completed': 'Zakończone'
+        }[task.status];
+        
+        const assigneeText = task.assignment_type === 'global' ? 'Globalne' : 
+                           task.assignment_type === 'self' ? 'Własne' : 
+                           (task.assigned_user_name || getUserName(task.assigned_user));
+        
+        taskDiv.innerHTML = `
+            <div class="admin-task-icon">
+                <i class="${icon}" style="color: ${priorityClass === 'priority-urgent' ? '#ef4444' : '#f59e0b'};"></i>
+            </div>
+            <div class="admin-task-content">
+                <div class="admin-task-title">${escapeHtml(task.title)}</div>
+                <div class="admin-task-meta">
+                    ${assigneeText} • ${task.sfid_id || 'Brak lokalizacji'}
+                    ${task.due_date ? ' • ' + formatDueDate(task.due_date) : ''}
+                </div>
+            </div>
+            <div class="admin-task-status ${task.status === 'returned' ? 'status-returned' : dueDateClass === 'due-overdue' ? 'status-overdue' : ''}">
+                ${statusText}
+            </div>
+        `;
+        
+        priorityContainer.appendChild(taskDiv);
+    });
+}
+
 async function toggleTaskCompletion(taskId, isCompleted) {
-    const newStatus = isCompleted ? 'completed' : 'new';
+    const newStatus = isCompleted ? 'completed' : 'returned';
     await updateTaskStatus(taskId, newStatus);
 }
 

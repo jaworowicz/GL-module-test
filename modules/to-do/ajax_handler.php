@@ -51,10 +51,10 @@ try {
 }
 
 function getUsers($pdo) {
-    $query = "SELECT id, CONCAT(first_name, ' ', last_name) as name 
-              FROM employees 
-              WHERE deleted_at IS NULL 
-              ORDER BY first_name, last_name";
+    $query = "SELECT id, name 
+              FROM users 
+              WHERE is_active = 1 
+              ORDER BY name";
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -66,11 +66,11 @@ function getTasks($pdo, $user_id) {
     $query = "
         SELECT 
             t.*,
-            CONCAT(e.first_name, ' ', e.last_name) as assigned_user_name,
-            CONCAT(c.first_name, ' ', c.last_name) as created_by_name
+            u.name as assigned_user_name,
+            c.name as created_by_name
         FROM todo_tasks t
-        LEFT JOIN employees e ON t.assigned_user = e.id
-        LEFT JOIN employees c ON t.created_by = c.id
+        LEFT JOIN users u ON t.assigned_user = u.id
+        LEFT JOIN users c ON t.created_by = c.id
         WHERE t.deleted_at IS NULL
         ORDER BY 
             CASE 
