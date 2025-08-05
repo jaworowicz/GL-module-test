@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -606,7 +605,7 @@
                 grid-template-columns: 1fr;
                 gap: 15px;
             }
-            
+
             .header {
                 flex-direction: column;
                 gap: 15px;
@@ -754,13 +753,16 @@
             </div>
         </div>
 
-        <!-- Widget responsywny -->
-        <div class="widget-container">
-            <h3 class="widget-title">
-                <i class="fas fa-list-check"></i> 
-                Moje zadania do wykonania
-            </h3>
-            <div class="widget-tasks" id="widget-tasks"></div>
+        <!-- Dodaj białe tło pod kontenerami aby animacja była widoczna -->
+        <div style="background: white; border-radius: 16px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+            <!-- Widget responsywny -->
+            <div class="widget-container">
+                <h3 class="widget-title">
+                    <i class="fas fa-list-check"></i> 
+                    Moje zadania do wykonania
+                </h3>
+                <div class="widget-tasks" id="widget-tasks"></div>
+            </div>
         </div>
     </div>
 
@@ -901,10 +903,10 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             date.setHours(0, 0, 0, 0);
-            
+
             const diffTime = date - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays < 0) {
                 return `Przeterminowane (${Math.abs(diffDays)} dni)`;
             } else if (diffDays === 0) {
@@ -922,10 +924,10 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             date.setHours(0, 0, 0, 0);
-            
+
             const diffTime = date - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays < 0) {
                 return 'due-overdue';
             } else if (diffDays === 0) {
@@ -946,7 +948,7 @@
                 tomorrow.setDate(today.getDate() + 1);
                 const yesterday = new Date(today);
                 yesterday.setDate(today.getDate() - 1);
-                
+
                 tasks = [
                     {
                         id: 1,
@@ -1062,7 +1064,7 @@
 
             const userName = task.assignedUser ? getUserName(task.assignedUser) : 'Wszyscy';
             const dueDateClass = getDueDateClass(task.dueDate);
-            
+
             if (dueDateClass) {
                 taskDiv.classList.add(dueDateClass);
             }
@@ -1133,7 +1135,7 @@
             editingTaskId = taskId;
             const modal = document.getElementById('taskModal');
             const title = document.getElementById('modalTitle');
-            
+
             if (taskId) {
                 title.textContent = 'Edytuj zadanie';
                 const task = tasks.find(t => t.id === taskId);
@@ -1152,7 +1154,7 @@
                 title.textContent = 'Dodaj nowe zadanie';
                 document.getElementById('taskForm').reset();
             }
-            
+
             modal.style.display = 'block';
         }
 
@@ -1164,7 +1166,7 @@
         function toggleUserSelect() {
             const assignmentType = document.getElementById('taskAssignmentType').value;
             const userSelectGroup = document.getElementById('userSelectGroup');
-            
+
             if (assignmentType === 'user') {
                 userSelectGroup.style.display = 'block';
             } else {
@@ -1175,7 +1177,7 @@
         // Obsługa formularza
         document.getElementById('taskForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = {
                 title: document.getElementById('taskTitle').value,
                 description: document.getElementById('taskDescription').value,
@@ -1240,7 +1242,7 @@
 
         function setupDragAndDrop() {
             const columns = document.querySelectorAll('.drop-zone');
-            
+
             columns.forEach(column => {
                 column.addEventListener('dragover', handleDragOver);
                 column.addEventListener('drop', handleDrop);
@@ -1263,14 +1265,14 @@
             if (target && !e.target.closest('.task-action-btn')) {
                 dragStartTime = Date.now();
                 isDragging = false;
-                
+
                 draggedElement = target;
                 const touch = e.touches[0];
                 initialX = touch.clientX;
                 initialY = touch.clientY;
                 currentX = touch.clientX;
                 currentY = touch.clientY;
-                
+
                 // Opóźnienie przed rozpoczęciem przeciągania
                 setTimeout(() => {
                     if (draggedElement && !isDragging) {
@@ -1289,14 +1291,14 @@
 
         function handleTouchMove(e) {
             if (!draggedElement) return;
-            
+
             const touch = e.touches[0];
             currentX = touch.clientX;
             currentY = touch.clientY;
-            
+
             const deltaX = Math.abs(currentX - initialX);
             const deltaY = Math.abs(currentY - initialY);
-            
+
             // Rozpocznij przeciąganie jeśli ruch jest większy niż 10px
             if ((deltaX > 10 || deltaY > 10) && !isDragging) {
                 isDragging = true;
@@ -1306,22 +1308,22 @@
                 draggedElement.style.pointerEvents = 'none';
                 draggedElement.style.transform = 'rotate(3deg) scale(1.05)';
             }
-            
+
             if (isDragging) {
                 e.preventDefault();
-                
+
                 draggedElement.style.left = (currentX - 50) + 'px';
                 draggedElement.style.top = (currentY - 50) + 'px';
-                
+
                 // Znajdź kolumnę pod palcem
                 const elementBelow = document.elementFromPoint(currentX, currentY);
                 const dropZone = elementBelow?.closest('.drop-zone');
-                
+
                 // Usuń poprzednie podświetlenia
                 document.querySelectorAll('.drop-zone').forEach(zone => {
                     zone.classList.remove('drag-over');
                 });
-                
+
                 // Dodaj podświetlenie do aktualnej kolumny
                 if (dropZone) {
                     dropZone.classList.add('drag-over');
@@ -1331,24 +1333,24 @@
 
         function handleTouchEnd(e) {
             if (!draggedElement) return;
-            
+
             // Jeśli nie było przeciągania, pozwól na normalne kliknięcia
             if (!isDragging) {
                 draggedElement = null;
                 return;
             }
-            
+
             e.preventDefault();
-            
+
             // Znajdź kolumnę pod miejscem puszczenia
             const elementBelow = document.elementFromPoint(currentX, currentY);
             const dropZone = elementBelow?.closest('.drop-zone');
-            
+
             if (dropZone) {
                 const newStatus = dropZone.id.replace('-tasks', '');
                 const taskId = parseInt(draggedElement.dataset.taskId);
                 const task = tasks.find(t => t.id === taskId);
-                
+
                 if (task && task.status !== newStatus) {
                     task.status = newStatus;
                     saveTasks();
@@ -1356,7 +1358,7 @@
                     renderWidget();
                 }
             }
-            
+
             // Przywróć element do normalnego stanu
             draggedElement.classList.remove('dragging', 'mobile-drag-mode');
             draggedElement.style.position = '';
@@ -1365,12 +1367,12 @@
             draggedElement.style.transform = '';
             draggedElement.style.left = '';
             draggedElement.style.top = '';
-            
+
             // Usuń podświetlenia
             document.querySelectorAll('.drop-zone').forEach(zone => {
                 zone.classList.remove('drag-over');
             });
-            
+
             draggedElement = null;
             isDragging = false;
         }
@@ -1404,10 +1406,10 @@
         function handleDrop(e) {
             e.preventDefault();
             e.currentTarget.classList.remove('drag-over');
-            
+
             const taskId = parseInt(e.dataTransfer.getData('text/plain'));
             const newStatus = e.currentTarget.id.replace('-tasks', '');
-            
+
             const task = tasks.find(t => t.id === taskId);
             if (task && task.status !== newStatus) {
                 task.status = newStatus;
@@ -1421,10 +1423,11 @@
         function renderWidget() {
             const widgetContainer = document.getElementById('widget-tasks');
             const myTasks = tasks.filter(task => {
+                // Filtruj zadania przypisane do użytkownika
                 return (task.assignmentType === 'self' && task.assignedUser === currentUser) ||
                        (task.assignmentType === 'user' && task.assignedUser === currentUser) ||
                        (task.assignmentType === 'global');
-            }).filter(task => task.status !== 'completed');
+            });
 
             widgetContainer.innerHTML = '';
 
@@ -1436,18 +1439,18 @@
             myTasks.forEach(task => {
                 const taskDiv = document.createElement('div');
                 taskDiv.className = 'widget-task';
-                
+
                 const dueDateClass = getDueDateClass(task.dueDate);
                 if (dueDateClass) {
                     taskDiv.classList.add(dueDateClass);
                 }
-                
+
                 const dueDateHtml = task.dueDate ? `
                     <div class="widget-task-due ${dueDateClass}">
                         ${formatDueDate(task.dueDate)}
                     </div>
                 ` : '';
-                
+
                 taskDiv.innerHTML = `
                     <label class="custom-checkbox">
                         <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} 
@@ -1461,7 +1464,7 @@
                     </div>
                     <span class="assignee-type type-${task.assignmentType}">${task.assignmentType}</span>
                 `;
-                
+
                 widgetContainer.appendChild(taskDiv);
             });
         }
@@ -1486,7 +1489,7 @@
         window.onclick = function(event) {
             const taskModal = document.getElementById('taskModal');
             const confirmModal = document.getElementById('confirmModal');
-            
+
             if (event.target === taskModal) {
                 closeTaskModal();
             }

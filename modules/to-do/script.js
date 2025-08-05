@@ -625,10 +625,11 @@ async function updateTaskStatus(taskId, newStatus) {
 function renderWidget() {
     const widgetContainer = document.getElementById('widget-tasks');
     const myTasks = tasks.filter(task => {
+        // Filtruj zadania przypisane do użytkownika
         return (task.assignment_type === 'self' && task.assigned_user === currentUser) ||
                (task.assignment_type === 'user' && task.assigned_user === currentUser) ||
                (task.assignment_type === 'global');
-    }).filter(task => task.status !== 'completed');
+    });
 
     widgetContainer.innerHTML = '';
 
