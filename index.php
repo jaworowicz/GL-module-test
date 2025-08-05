@@ -1,17 +1,11 @@
 
 <?php
 // Strona główna - Dashboard
-require_once 'includes/auth.php';
-require_once 'includes/db.php';
+session_start();
 
-// Sprawdź autoryzację
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-
-$current_user = $_SESSION['user_id'];
-$current_sfid = $_SESSION['user_sfid'] ?? '20004014';
+// Symulacja danych użytkownika dla mockupu
+$current_user = 4;
+$current_sfid = '20004014';
 ?>
 
 <!DOCTYPE html>
@@ -184,11 +178,11 @@ $current_sfid = $_SESSION['user_sfid'] ?? '20004014';
                 </p>
             </a>
 
-            <a href="/modules/to-do/" class="module-card">
+            <a href="/modules/to-do/mockup.html" class="module-card">
                 <div class="module-icon">
                     <i class="fas fa-tasks"></i>
                 </div>
-                <h2 class="module-title">Tablica To-Do</h2>
+                <h2 class="module-title">Tablica To-Do (Mockup)</h2>
                 <p class="module-description">
                     System zarządzania zadaniami w stylu Kanban Board z możliwością przypisywania i śledzenia postępów.
                 </p>
@@ -211,7 +205,14 @@ $current_sfid = $_SESSION['user_sfid'] ?? '20004014';
             </h2>
             <div class="widgets-grid">
                 <div class="widget-card">
-                    <?php include 'modules/to-do/widget.php'; ?>
+                    <!-- Widget To-Do -->
+                    <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgb(51, 65, 85); border-radius: 12px; padding: 20px; height: 100%;">
+                        <h3 style="color: #34d399; margin-bottom: 15px; display: flex; align-items: center;">
+                            <i class="fas fa-list-check" style="margin-right: 8px;"></i>
+                            Widget To-Do (mockup)
+                        </h3>
+                        <p style="color: #94a3b8;">Kliknij w moduł To-Do powyżej, aby zobaczyć pełny mockup</p>
+                    </div>
                 </div>
                 
                 <div class="widget-card">

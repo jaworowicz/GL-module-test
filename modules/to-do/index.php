@@ -3,19 +3,58 @@
 // Plik: /modules/to-do/index.php
 // Główny moduł To-Do Kanban Board
 
-require_once __DIR__.'/../../includes/auth.php';
 require_once __DIR__.'/../../includes/db.php';
 
-// Sprawdź autoryzację
-if (!is_logged_in()) {
-    header('Location: /modules/auth/login.php?error=login_required');
+// Prosta kontrola sesji bez dodatkowych plików auth
+session_start();
+
+// Sprawdź autoryzację - prosta implementacja
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /login.php?error=login_required');
     exit;
 }
 
-$current_user = get_current_user();
+// Pobierz dane użytkownika z bazy
+try {
+    $stmt = $pdo->prepare("SELECT id, name, email, role, sfid_id FROM users WHERE id = ? AND is_active = 1");
+    $stmt->execute([$_SESSION['user_id']]);
+    $current_user = $stmt->fetch();
+    
+    if (!$current_user) {
+        session_destroy();
+        header('Location: /login.php?error=user_not_found');
+        exit;
+    }
+} catch (PDOException $e) {
+    die("Błąd bazy danych: " . $e->getMessage());
+}
+
 $user_id = $current_user['id'];
 $user_role = $current_user['role'];
-$sfid = $_SESSION['sfid'] ?? null;
+$sfid = $current_user['sfid_id'];
+
+// Pobierz lokalizacje dla filtrów
+try {
+    $locations_stmt = $pdo->prepare("SELECT id, name FROM sfid_locations WHERE is_active = 1 ORDER BY name");
+    $locations_stmt->execute();
+    $locations = $locations_stmt->fetchAll();
+} catch (PDOException $e) {
+    $locations = [];
+}
+
+// Pobierz użytkowników dla filtrów (tylko z tej samej lokalizacji lub wszyscy dla superadmin)
+try {
+    if ($user_role === 'superadmin') {
+        $users_stmt = $pdo->prepare("SELECT id, name FROM users WHERE is_active = 1 ORDER BY name");
+        $users_stmt->execute();
+    } else {
+        $users_stmt = $pdo->prepare("SELECT id, name FROM users WHERE sfid_id = ? AND is_active = 1 ORDER BY name");
+        $users_stmt->execute([$sfid]);
+    }
+    $users = $users_stmt->fetchAll();
+} catch (PDOException $e) {
+    $users = [];
+}
 
 ?>
 <!DOCTYPE html>
@@ -34,12 +73,25 @@ $sfid = $_SESSION['sfid'] ?? null;
             <div class="controls">
                 <select id="locationFilter" class="custom-select">
                     <option value="all">Wszystkie lokalizacje</option>
-                    <option value="20004014">BAZA 20004014</option>
-                    <option value="20004015">BAZA 20004015</option>
+                    <?php if ($user_role === 'superadmin'): ?>
+                        <?php foreach ($locations as $location): ?>
+                            <option value="<?php echo htmlspecialchars($location['id']); ?>">
+                                <?php echo htmlspecialchars($location['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <option value="<?php echo htmlspecialchars($sfid); ?>" selected>
+                            Moja lokalizacja
+                        </option>
+                    <?php endif; ?>
                 </select>
                 <select id="userFilter" class="custom-select">
                     <option value="all">Wszyscy użytkownicy</option>
-                    <!-- Użytkownicy będą ładowani dynamicznie -->
+                    <?php foreach ($users as $user): ?>
+                        <option value="<?php echo htmlspecialchars($user['id']); ?>">
+                            <?php echo htmlspecialchars($user['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
                 <button class="btn btn-primary" onclick="openTaskModal()">
                     <i class="fas fa-plus"></i> Dodaj zadanie
@@ -131,14 +183,28 @@ $sfid = $_SESSION['sfid'] ?? null;
                 <div class="form-group" id="userSelectGroup" style="display: none;">
                     <label class="form-label">Użytkownik</label>
                     <select id="taskAssignedUser" class="form-select">
-                        <!-- Opcje będą ładowane dynamicznie -->
+                        <?php foreach ($users as $user): ?>
+                            <option value="<?php echo htmlspecialchars($user['id']); ?>">
+                                <?php echo htmlspecialchars($user['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Lokalizacja</label>
                     <select id="taskLocation" class="form-select">
-                        <option value="20004014">BAZA 20004014</option>
-                        <option value="20004015">BAZA 20004015</option>
+                        <?php if ($user_role === 'superadmin'): ?>
+                            <?php foreach ($locations as $location): ?>
+                                <option value="<?php echo htmlspecialchars($location['id']); ?>" 
+                                        <?php echo ($location['id'] == $sfid) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($location['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="<?php echo htmlspecialchars($sfid); ?>" selected>
+                                Moja lokalizacja
+                            </option>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <div class="form-group">
@@ -148,6 +214,10 @@ $sfid = $_SESSION['sfid'] ?? null;
                         <option value="medium">Średni</option>
                         <option value="high">Wysoki</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Termin wykonania</label>
+                    <input type="date" id="taskDueDate" class="form-input">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
